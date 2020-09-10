@@ -18,13 +18,13 @@
 	gproVector.h
 	Interface for vectors. Sets an example for C and C++ compatible headers.
 
-	Modified by: ____________
-	Modified because: ____________
+	Modified by: Rhys Sullivan
+	Modified because: Expanded vector class to allow for more operations
 */
 
 #ifndef _GPRO_VECTOR_H_
 #define _GPRO_VECTOR_H_
-
+#include <cmath>
 
 #ifdef __cplusplus
 // DB: link C++ symbols as if they are C where possible
@@ -71,13 +71,25 @@ union vec3
 	vec3(vec3 const& rh);	// copy ctor
 
 	vec3& operator =(vec3 const& rh);	// assignment operator (copy other to this)
-
+	
 	vec3& operator +=(vec3 const& rh);	// addition assignment operator (add other to this)
 
-	vec3 const operator +(vec3 const& rh) const;	// addition operator (get sum of this and another)
+	vec3& operator *= (const float rh);
+
+	vec3 operator-() const { return vec3(-x, -y, -z); }
+
+	float length_squared() const {
+		return (x * x) + (y * y) + (z * z);
+	}
+
+	float length() const {
+		return std::sqrt(length_squared());
+	}
 
 #endif	// __cplusplus
 };
+using point3 = vec3;
+using color = vec3;
 
 
 // DB: declare C functions (all equivalents of above C++ functions are here)

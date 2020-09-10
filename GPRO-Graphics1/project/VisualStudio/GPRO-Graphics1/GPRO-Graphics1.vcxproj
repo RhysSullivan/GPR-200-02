@@ -158,6 +158,12 @@
     <ClCompile Include="GPRO-Graphics1.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\gproColor.h" />
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\gproRay.h" />
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\Hittables\Hittable.h" />
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\Hittables\HittableList.h" />
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\Hittables\Sphere.h" />
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\rtweekend.h" />
     <ClInclude Include="..\..\..\include\gpro\gpro-math\gproVector.h" />
   </ItemGroup>
   <ItemGroup>

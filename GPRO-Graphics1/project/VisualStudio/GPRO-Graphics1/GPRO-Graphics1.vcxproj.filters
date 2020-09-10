@@ -22,6 +22,12 @@
     <Filter Include="Header Files\gpro\gpro-math\_inl">
       <UniqueIdentifier>{17c30ac2-2be6-4942-9283-4c8bf7177f14}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\gpro\gpro-graphics">
+      <UniqueIdentifier>{5b1a9c16-154e-4607-834e-d3447bed36d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\gpro\gpro-graphics\Hittables">
+      <UniqueIdentifier>{6391e348-34a2-4ebf-b776-d95aadf14c5d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GPRO-Graphics1.cpp">
@@ -31,6 +37,24 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\include\gpro\gpro-math\gproVector.h">
       <Filter>Header Files\gpro\gpro-math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\gproRay.h">
+      <Filter>Header Files\gpro\gpro-graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\gproColor.h">
+      <Filter>Header Files\gpro\gpro-graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\Hittables\Hittable.h">
+      <Filter>Header Files\gpro\gpro-graphics\Hittables</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\Hittables\Sphere.h">
+      <Filter>Header Files\gpro\gpro-graphics\Hittables</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\Hittables\HittableList.h">
+      <Filter>Header Files\gpro\gpro-graphics\Hittables</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\rtweekend.h">
+      <Filter>Header Files\gpro</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

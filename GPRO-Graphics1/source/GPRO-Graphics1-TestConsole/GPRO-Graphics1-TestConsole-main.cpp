@@ -23,39 +23,63 @@
 */
 
 
-#include <stdio.h>
-#include <stdlib.h>
 
 
-#include "gpro/gpro-math/gproVector.h"
+#include <fstream>
 
+#include "gpro/gpro-graphics/rtweekend.h"
+#include "gpro/gpro-graphics/Hittables/HittableList.h"
+#include "gpro/gpro-graphics/Hittables/Sphere.h"
+#include "gpro/gpro-graphics/gproColor.h"
 
-void testVector()
-{
-	// test array vector initializers and functions
-	float3 av, bv, cv, dv;
-	vec3default(av);								// -> a = (0, 0, 0)
-	vec3init(bv, 1.0f, 2.0f, 3.0f);					// -> b = (1, 2, 3)
-	vec3copy(dv, vec3init(cv, 4.0f, 5.0f, 6.0f));	// -> d = c = (4, 5, 6)
-	vec3copy(av, dv);								// a = d			-> a = (4, 5, 6)
-	vec3add(dv, bv);								// d += b			-> d = (4 + 1, 5 + 2, 6 + 3) = (5, 7, 9)
-	vec3sum(dv, bv, bv);							// d = b + b		-> d = (1 + 1, 2 + 2, 3 + 3) = (2, 4, 6)
-	vec3add(vec3sum(dv, cv, bv), av);				// d = c + b + a	-> d = (4 + 1 + 4, 5 + 2 + 5, 6 + 3 + 6) = (9, 12, 15)
-
-#ifdef __cplusplus
-	// test all constructors and operators
-	vec3 a, b(1.0f, 2.0f, 3.0f), c(cv), d(c);		// default; init; copy array; copy
-	a = d;											// assign						-> a = (4, 5, 6)
-	d += b;											// add assign					-> d = (5, 7, 9)
-	d = b + b;										// sum, init, assign			-> d = (2, 4, 6)
-	d = c + b + a;									// sum, init, sum, init, assign	-> d = (9, 12, 15)
-#endif	// __cplusplus
+color ray_color(const ray& r, const hittable& world) {
+	hit_record rec;
+	if (world.hit(r, 0.0f, infinity, rec)) {
+		return 0.5f * (rec.normal + color(1.0f, 1.0f, 1.0f));
+	}
+	vec3 unit_direction = unit_vector(r.direction());
+	float t = 0.5f * (unit_direction.y + 1.0f);
+	return (1.0f - t) * color(1.0f, 1.0f, 1.0f) + t * color(0.5f, 0.7f, 1.0f);
 }
-
 
 int main(int const argc, char const* const argv[])
 {
-	testVector();
+	// Image
+	const float aspect_ratio = 16.0f / 9.0f;
+	const int image_width = 400;
+	const int image_height = static_cast<int>(image_width / aspect_ratio);
+	std::ofstream OutFile("Raytraced.ppm");
+
+	// World
+	hittable_list world;
+	world.add(make_shared<sphere>(point3(0.0f, 0.0f, -1.0f), 0.5f));
+	world.add(make_shared<sphere>(point3(0.0f, -100.5f, -1.0f), 100.0f));
+
+	// Camera
+
+	float viewport_height = 2.0;
+	float viewport_width = aspect_ratio * viewport_height;
+	float focal_length = 1.0;
+	
+	point3 origin = point3(0, 0, 0);
+	vec3 horizontal = vec3(viewport_width, 0, 0);
+	vec3 vertical = vec3(0, viewport_height, 0);
+	point3 lower_left_corner = origin - (horizontal / 2) - (vertical / 2) - vec3(0, 0, focal_length);
+
+	// Render
+
+	OutFile << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+	for (int j = image_height - 1; j >= 0; --j) {
+		for (int i = 0; i < image_width; ++i) {
+			float u = float(i) / (image_width - 1);
+			float v = float(j) / (image_height - 1);
+			ray r(origin, lower_left_corner + (u * horizontal) + (v * vertical) - origin);
+			color pixel_color = ray_color(r, world);
+			//pixel_color = color(float (i) / (image_width - 1), float(j) / (image_height - 1), 0.25);
+			write_color(OutFile, pixel_color);
+		}
+	}
 
 	printf("\n\n");
 	system("pause");

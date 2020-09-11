@@ -20,7 +20,20 @@ public:
 	float radius;
 };
 
+
+/*
+Sphere isn't made up of geometry, we're just checking for intersections with the equation
+0 roots = no intersection
+1 roots = 1 intersection
+2 roots = 2 intersections
+*/
 bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
+	
+	/*
+	This section of code is solving for
+	sqrt(h^2 - ac)
+	*/
+	
 	vec3 oc = r.origin() - center;
 	float a = r.direction().length_squared();
 	float half_b = dot(oc, r.direction());

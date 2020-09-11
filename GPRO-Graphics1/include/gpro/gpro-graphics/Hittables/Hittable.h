@@ -10,9 +10,19 @@ struct hit_record {
 
 	bool front_face;
 
+	/*
+	if the dot product is > 0 then the vectors are pointing in the same direction indicating that it is inside of the sphere
+	*/
 	inline void set_face_normal(const ray& r, const vec3& outward_normal) {
 		front_face = dot(r.direction(), outward_normal) < 0;
-		normal = front_face ? outward_normal : -outward_normal;
+		if (front_face)
+		{
+			normal = outward_normal;
+		}
+		else
+		{
+			normal = -outward_normal;
+		}
 	}
 };
 

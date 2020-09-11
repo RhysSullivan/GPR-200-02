@@ -15,11 +15,15 @@
 */
 
 /*
-	GPRO-Graphics1-TestConsole-main.c/.cpp
-	Main entry point source file for a Windows console application.
+	Referenced: Ray Tracing in One Weekend. raytracing.github.io/books/RayTracingInOneWeekend.html
+	Accessed 9/10/2020.
 
-	Modified by: ____________
-	Modified because: ____________
+	GPRO_Graphics1-TestConsole-main.cpp
+	Main entry point for Windows console application.
+
+	Original File By: Peter Shirley
+	Modified by: Rhys Sullivan
+	Modified because: Adjusted file to match project style.
 */
 
 
@@ -37,23 +41,29 @@ color ray_color(const ray& r, const hittable& world) {
 	if (world.hit(r, 0.0f, infinity, rec)) {
 		return 0.5f * (rec.normal + color(1.0f, 1.0f, 1.0f));
 	}
+
+
+	// Handles the background color
 	vec3 unit_direction = unit_vector(r.direction());
-	float t = 0.5f * (unit_direction.y + 1.0f);
-	return (1.0f - t) * color(1.0f, 1.0f, 1.0f) + t * color(0.5f, 0.7f, 1.0f);
+	float screenGradient = 0.5f * (unit_direction.y + 1.0f);
+
+	color bottomColor = color(1.0f, 1.0f, 1.0f); // white
+	color topColor = color(0.5f, 0.7f, 1.0f); // blue
+	return (1.0f - screenGradient) *  bottomColor + screenGradient * topColor; // gradient that is done by interping as we move up the screen
 }
 
 int main(int const argc, char const* const argv[])
 {
 	// Image
 	const float aspect_ratio = 16.0f / 9.0f;
-	const int image_width = 400;
+	const int image_width = 400; // Width in pixels
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
 	std::ofstream OutFile("Raytraced.ppm");
 
 	// World
 	hittable_list world;
 	world.add(make_shared<sphere>(point3(0.0f, 0.0f, -1.0f), 0.5f));
-	world.add(make_shared<sphere>(point3(0.0f, -100.5f, -1.0f), 100.0f));
+	//world.add(make_shared<sphere>(point3(0.0f, -100.5f, -1.0f), 100.0f));
 
 	// Camera
 
@@ -62,25 +72,23 @@ int main(int const argc, char const* const argv[])
 	float focal_length = 1.0;
 	
 	point3 origin = point3(0, 0, 0);
-	vec3 horizontal = vec3(viewport_width, 0, 0);
+	vec3 horizontal = vec3(viewport_width, 0, 0); 
 	vec3 vertical = vec3(0, viewport_height, 0);
 	point3 lower_left_corner = origin - (horizontal / 2) - (vertical / 2) - vec3(0, 0, focal_length);
 
 	// Render
 
 	OutFile << "P3\n" << image_width << ' ' << image_height << "\n255\n";
-
+	
 	for (int j = image_height - 1; j >= 0; --j) {
 		for (int i = 0; i < image_width; ++i) {
 			float u = float(i) / (image_width - 1);
 			float v = float(j) / (image_height - 1);
 			ray r(origin, lower_left_corner + (u * horizontal) + (v * vertical) - origin);
 			color pixel_color = ray_color(r, world);
-			//pixel_color = color(float (i) / (image_width - 1), float(j) / (image_height - 1), 0.25);
 			write_color(OutFile, pixel_color);
 		}
 	}
 
 	printf("\n\n");
-	system("pause");
 }

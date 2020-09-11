@@ -158,6 +158,7 @@
     <ClCompile Include="GPRO-Graphics1.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\include\gpro\gpro-graphics\gproCamera.h" />
     <ClInclude Include="..\..\..\include\gpro\gpro-graphics\gproColor.h" />
     <ClInclude Include="..\..\..\include\gpro\gpro-graphics\gproRay.h" />
     <ClInclude Include="..\..\..\include\gpro\gpro-graphics\Hittables\Hittable.h" />

@@ -6,9 +6,9 @@
 struct hit_record {
 	point3 p;
 	vec3 normal;
-	float t;
+	float t = 0;
 
-	bool front_face;
+	bool front_face = false;
 
 	/*
 	if the dot product is > 0 then the vectors are pointing in the same direction indicating that it is inside of the sphere

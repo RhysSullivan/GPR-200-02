@@ -143,34 +143,29 @@ vec4 myEffect4(in vec2 fragCoord, in vec2 resolution)
     // Road
 	if(uv.y < -.2)
     {          
-        float SquareSizeY = 10.; 
-        float compX = floor(uv.x * 2.);
-        float compY = floor(uv.y * SquareSizeY);        
-        float sum = mod(compY, 2.);    
+        float SquareSizeY = 10.; // similar code to the grid tiles, smaller grid        
+        float compY = floor(uv.y * SquareSizeY); // only make a grid on the Y axis
+        float sum = mod(compY, 2.);  
         
-        for(float i = 0.; i < 4.; i++)
+        for(float i = 0.; i < 4.; i++) // offsets for drawing purple part of road
         {
             float DBP = .2; // distance between purple
-            float pos = mod(iTime, 2.0)-(.1+i+.3);
+            float pos = mod(iTime, 2.0)-(.1+i+.3); // move the road 
             if(uv.x > pos - DBP && uv.x < pos+DBP)
                 return Black;
         }
         if(sum >= 1.) // if 1 then either one of these squares are in an even pos, if both then they both are and we dont want to colour that
             return Black;
-        return vec4(1.,0.,1.,0.);
+        return vec4(1.,0.,1.,0.); // return black where the road isn't
 	}
-    else if(uv.y >= -.2 && uv.y <= -.2)
-    {
-		return Black;
-    }
     
     
-    vec4 Purple = vec4(1.,0.,.7,0.);
-    vec4 Blk = Black;    
-    float interp = smoothstep(1., sin(iTime)/2.+-.9, uv.y);
-    
-    vec4 col = mix(Blk, Purple, interp);
-    return col;
+     
+    vec4 Purple = vec4(1.,0.,.7,0.); // purple colouring
+    vec4 Blk = Black; //black
+    float interp = smoothstep(1., sin(iTime)/2.+-.9, uv.y); //interp between them for the background gradient using Y as the interp value
+    vec4 col = mix(Blk, Purple, interp); // do a mix of colours using the interp value
+    return col; 
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )

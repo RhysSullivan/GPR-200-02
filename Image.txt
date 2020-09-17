@@ -1,16 +1,23 @@
 #define White vec4(1.0);  
 #define Black vec4(0.0);  
 #define Red vec4(1.0,0.0,0.0,0.0);
-vec4 myEffect1(in vec2 fragCoord, in vec2 resolution)
+
+/* Effect #0:
+Output the screen-space or UV coordinate as a static gradient.
+Produces a familiar pattern of black, red, green and yellow.  We'll start this one in class.*/
+vec4 myEffect0(in vec2 fragCoord, in vec2 resolution)
 { 
-    vec2 uv = fragCoord/iResolution.xy;
-    return vec4(uv.x, uv.y, sin(iTime), 1.0);
+  	vec2 uv = fragCoord/iResolution.xy; // bring pixel coord into UV range of 0 to 1, i.e fragCoord.x = 233 / iResolution.x = 255 = 0.9137...
+    return vec4(uv.x, uv.y, 0., 1.0); // colors are changed based on the x,y position of the pixel from 0 to 1
 }
 
-vec4 myEffect2(in vec2 fragCoord, in vec2 resolution)
+/*Effect #1: 
+Implement a static checkerboard pattern with perfectly square checkers
+Feel free to show the difference between pixel-size checkers and large squares, but the intent of this effect is the latter.*/
+vec4 myEffect1(in vec2 fragCoord, in vec2 resolution)
 { 
     vec2 uv = fragCoord / resolution; // normalize UV coords
-    uv.x *= resolution.x/resolution.y; // normalize for aspect ratio
+    uv.x *= resolution.x/resolution.y; // aspect ratio
     
     float SquareSize = 50.; // has to be >= 2
    
@@ -25,15 +32,22 @@ vec4 myEffect2(in vec2 fragCoord, in vec2 resolution)
     return White;
 }
 
+// Simple utility function to get the radius of a point relative to a circle, returns a vec
+// CC - Circle Center
+// UV - UV Coords
+// vec2 output - take x + y check if < radius to see if it is a circle, returns vec2 for flexability
 // r = (x-a)^2+(y-b)^2
-vec2 calcCirc(vec2 CC, float CR, vec2 uv)
+vec2 calcCirc(vec2 CC, vec2 uv)
 {    
     float x = (uv.x - CC.x) * (uv.x - CC.x); // (x-a)^2
     float y = (uv.y - CC.y) * (uv.y - CC.y); // (y-b)^2
     return vec2(x,y);
 }
 
-vec4 myEffect3(in vec2 fragCoord, in vec2 resolution)
+/*Effect #2: Implement a circle whose color and size change over time.  
+The background color should be complementary to that of the circle.
+If you're feeling daring, color the circle with a radial gradient (from the center to the edge).*/
+vec4 myEffect2(in vec2 fragCoord, in vec2 resolution)
 { 
     vec2 uv = fragCoord / resolution;   
     uv.x *= resolution.x/resolution.y; // normalize for aspect ratio      
@@ -41,76 +55,92 @@ vec4 myEffect3(in vec2 fragCoord, in vec2 resolution)
     vec2 CC = vec2(.5,.5); // CC = CircleCenter
     CC.x *= resolution.x/resolution.y; // adjust for aspect ratio
  	float CR = .1+abs(cos(iTime))/10.; // CR = CircleRadius   
-    vec2 circ = calcCirc(CC, CR, uv); // find distance from point to radius of circle, if <= radius then in circle
+    vec2 circ = calcCirc(CC, uv); // find distance from point to radius of circle, if <= radius then in circle
      
-    if(circ.x + circ.y <= CR)
+    if(circ.x + circ.y <= CR) // if this is <= CR then we are inside of the circle
     {
-		return vec4(uv.x, uv.y,abs(sin(iTime)),0.);
+        float dif = CR - (circ.x + circ.y); // take the differnce between the radius of the circle and where the point is relative to the radius
+        dif = 1. / dif; // flip the dif so the colors go from out to in
+        dif *= .5 * CR; // Scale the dif to be in a usable range and multiply by the CR to allow it to change size
+		return vec4(dif, dif * .5,dif / .6,0.);
     }    
     
-    return vec4(uv.x, uv.y,abs(cos(iTime)+.1),0.); // else return the background with some UV coloring
+    return vec4(uv.x, uv.y,abs(cos(1.)+.1),0.); // else return the background with some UV coloring
 }
 
-vec4 myEffect4(in vec2 fragCoord, in vec2 resolution)
+/*
+Effect #3: Implement a unique, full-screen psychedelic effect to morph colors and patterns all across the screen. 
+Use time and other uniforms to animate it.*/
+vec4 myEffect3(in vec2 fragCoord, in vec2 resolution)
 { 
     vec2 uv = fragCoord / resolution; // normalize UV coords  
     uv.x *= resolution.x/resolution.y; // normalize for aspect ratio
+         
+    float rot = radians(270.0 + sin(iTime)*10.);  
     
-    for(float j = -1.; j <= 1.; j += .1)
+    mat2 m = mat2(cos(rot), -sin(rot), sin(rot), cos(rot)); // build a rotation matrix, this is from 3d Math but I referenced https://www.shadertoy.com/view/XlsGWf
+    uv *= m; // apply rotation matrix to the UV coords
+        
+    
+    
+    for(float j = -1.5; j <= 1.; j += .1) // loop for circle y
     {
-        for(float i = -2.; i <= 2.; i += .1)
+        for(float i = -2.; i <= 2.; i += .1) // loop for circle x
         {            
         	vec2 CC = vec2(i*(i+j),i+j); // CC = CircleCenter
             CC.x *= resolution.x/resolution.y; // adjust for aspect ratio
             float CR = abs(cos(iTime))/1000.; // CR = CircleRadius   
-            vec2 circ = calcCirc(CC, CR, uv); // find distance from point to radius of circle, if <= radius then in circle
+            vec2 circ = calcCirc(CC, uv); // find distance from point to radius of circle, if <= radius then in circle
 
             if(circ.x + circ.y <= CR)
             {
-                return vec4(uv.x, uv.y,abs(sin(iTime)),0.);
+                return texture(iChannel0,uv); // sample a texture and color the 
             }   
         }
     }
-    return vec4(uv.x, 0., abs(sin(iTime)) + .8,0.);
+    return vec4(uv.x, 0., abs(sin(iTime)) + .8,0.); // return the background as a gradient that changes over the X pos
 }
 
-vec4 myEffect5(in vec2 fragCoord, in vec2 resolution)
+/*Effect #4: Additional Custom Effect
+Simple vapor wave style background with 3 suns, a moving road and a gradient background*/
+vec4 myEffect4(in vec2 fragCoord, in vec2 resolution)
 { 
     vec2 uv = fragCoord / resolution; // normalize UV coords  
-    uv-=.5;
+	uv-=.5; // bring everything back for a range of -.5 to .5
     uv.x *= resolution.x/resolution.y; // normalize for aspect ratio
+    vec2 buv = uv; // seperate UV set for things that are rotated
+    float rot = radians(2.0 + sin(iTime)*5.); // define a rotation amount for the suns      
     
-    // parabola is y=x^2
-    for(float i = -2.5; i <= 2.5; i+= .5)
-    {   
-        vec2 bUV = uv;
-        float rot = radians(270.0 + sin(iTime));       
+    mat2 m = mat2(cos(rot), -sin(rot), sin(rot), cos(rot)); // build a rotation matrix, this is from 3d Math but I referenced https://www.shadertoy.com/view/XlsGWf
+    buv *= m; // apply UV matrix
     
-    	mat2 m = mat2(cos(rot), -sin(rot), sin(rot), cos(rot)); // build a rotation matrix, this is from 3d Math but I referenced https://www.shadertoy.com/view/XlsGWf
-        bUV *= m;
-        
-        vec2 CC = vec2((-(i*i)/2.)+.2,i); // CC = CircleCenter
-        
-        CC.x *= resolution.x/resolution.y; // adjust for aspect ratio
+    float x = 0.; // x pos for the suns to be offset from       
+    for(float i = -.5; i <= .5; i+= .5)
+    {        
+        vec2 CC = vec2(x+i, 0.3 + abs(i) * -.4); // Circle Center is our X, added to an offset, and y translated down with some math
+
         float CR = (.1+abs(cos(iTime)))/50.; // CR = CircleRadius           
         CR = 1./50.;
-        vec2 circ = calcCirc(CC, CR, bUV); // find distance from point to radius of circle, if <= radius then in circle
-        
-        if(circ.x + circ.y <= CR)
+
+        vec2 circ = calcCirc(CC, buv); // find distance from point to radius of circle, if <= radius then in circle
+
+        if(circ.x + circ.y <= CR) // if circ.x + circ.y is <= CR then the offset is in the radius
         {
-            if(!(mod(floor(circ.x * 500.), 2.) == 0.))
-            {
-            	return vec4(1.,.6,0.,0.);    
-            }
-        }  
+             if(CC.y - buv.y < 0.) // don't apply the sun modulus if we're not half way down
+             {
+                 return vec4(1.,.6,0.,0.); // return an orangey colour   
+             }
+             else if(!(mod(floor(circ.y * (abs(sin(iTime* 10.)) * 300.+ 500.)), 2.) == 0.)) // math to do the split parts of the sun, similar to checkboard
+             {
+                return vec4(1.,.6,0.,0.); // return an orangey colour   
+             }                     
+   		}
     }
-    
     
     // Road
 	if(uv.y < -.2)
     {          
-        float SquareSizeY = 10.;
-
+        float SquareSizeY = 10.; 
         float compX = floor(uv.x * 2.);
         float compY = floor(uv.y * SquareSizeY);        
         float sum = mod(compY, 2.);    
@@ -142,5 +172,9 @@ vec4 myEffect5(in vec2 fragCoord, in vec2 resolution)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    fragColor = myEffect4(fragCoord, iResolution.xy);
+    //fragColor = myEffect0(fragCoord, iResolution.xy);
+    //fragColor = myEffect1(fragCoord, iResolution.xy);
+    fragColor = myEffect2(fragCoord, iResolution.xy);
+    //fragColor = myEffect3(fragCoord, iResolution.xy);
+    //fragColor = myEffect4(fragCoord, iResolution.xy);
 }

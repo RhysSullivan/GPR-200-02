@@ -1,3 +1,6 @@
+//Code by Rhys Sullivan,
+//Referenced https://www.shadertoy.com/view/XlsGWf
+
 #define White vec4(1.0);  
 #define Black vec4(0.0);  
 #define Red vec4(1.0,0.0,0.0,0.0);

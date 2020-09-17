@@ -1,0 +1,146 @@
+#define White vec4(1.0);  
+#define Black vec4(0.0);  
+#define Red vec4(1.0,0.0,0.0,0.0);
+vec4 myEffect1(in vec2 fragCoord, in vec2 resolution)
+{ 
+    vec2 uv = fragCoord/iResolution.xy;
+    return vec4(uv.x, uv.y, sin(iTime), 1.0);
+}
+
+vec4 myEffect2(in vec2 fragCoord, in vec2 resolution)
+{ 
+    vec2 uv = fragCoord / resolution; // normalize UV coords
+    uv.x *= resolution.x/resolution.y; // normalize for aspect ratio
+    
+    float SquareSize = 50.; // has to be >= 2
+   
+    float compX = floor(uv.x * SquareSize); // compX stands for compare x, in this case it takes a value like .23, brings it up to a size it can be modulused
+    float compY = floor(uv.y * SquareSize); // same but for y
+    
+    float sum = mod(compX, 2.); // checks for even position
+    sum += mod(compY, 2.);    
+    
+    if(sum >= 1. && sum < 2.) // if 1 then either one of these squares are in an even pos, if both then they both are and we dont want to colour that
+        return Black;
+    return White;
+}
+
+// r = (x-a)^2+(y-b)^2
+vec2 calcCirc(vec2 CC, float CR, vec2 uv)
+{    
+    float x = (uv.x - CC.x) * (uv.x - CC.x); // (x-a)^2
+    float y = (uv.y - CC.y) * (uv.y - CC.y); // (y-b)^2
+    return vec2(x,y);
+}
+
+vec4 myEffect3(in vec2 fragCoord, in vec2 resolution)
+{ 
+    vec2 uv = fragCoord / resolution;   
+    uv.x *= resolution.x/resolution.y; // normalize for aspect ratio      
+    
+    vec2 CC = vec2(.5,.5); // CC = CircleCenter
+    CC.x *= resolution.x/resolution.y; // adjust for aspect ratio
+ 	float CR = .1+abs(cos(iTime))/10.; // CR = CircleRadius   
+    vec2 circ = calcCirc(CC, CR, uv); // find distance from point to radius of circle, if <= radius then in circle
+     
+    if(circ.x + circ.y <= CR)
+    {
+		return vec4(uv.x, uv.y,abs(sin(iTime)),0.);
+    }    
+    
+    return vec4(uv.x, uv.y,abs(cos(iTime)+.1),0.); // else return the background with some UV coloring
+}
+
+vec4 myEffect4(in vec2 fragCoord, in vec2 resolution)
+{ 
+    vec2 uv = fragCoord / resolution; // normalize UV coords  
+    uv.x *= resolution.x/resolution.y; // normalize for aspect ratio
+    
+    for(float j = -1.; j <= 1.; j += .1)
+    {
+        for(float i = -2.; i <= 2.; i += .1)
+        {            
+        	vec2 CC = vec2(i*(i+j),i+j); // CC = CircleCenter
+            CC.x *= resolution.x/resolution.y; // adjust for aspect ratio
+            float CR = abs(cos(iTime))/1000.; // CR = CircleRadius   
+            vec2 circ = calcCirc(CC, CR, uv); // find distance from point to radius of circle, if <= radius then in circle
+
+            if(circ.x + circ.y <= CR)
+            {
+                return vec4(uv.x, uv.y,abs(sin(iTime)),0.);
+            }   
+        }
+    }
+    return vec4(uv.x, 0., abs(sin(iTime)) + .8,0.);
+}
+
+vec4 myEffect5(in vec2 fragCoord, in vec2 resolution)
+{ 
+    vec2 uv = fragCoord / resolution; // normalize UV coords  
+    uv-=.5;
+    uv.x *= resolution.x/resolution.y; // normalize for aspect ratio
+    
+    // parabola is y=x^2
+    for(float i = -2.5; i <= 2.5; i+= .5)
+    {   
+        vec2 bUV = uv;
+        float rot = radians(270.0 + sin(iTime));       
+    
+    	mat2 m = mat2(cos(rot), -sin(rot), sin(rot), cos(rot)); // build a rotation matrix, this is from 3d Math but I referenced https://www.shadertoy.com/view/XlsGWf
+        bUV *= m;
+        
+        vec2 CC = vec2((-(i*i)/2.)+.2,i); // CC = CircleCenter
+        
+        CC.x *= resolution.x/resolution.y; // adjust for aspect ratio
+        float CR = (.1+abs(cos(iTime)))/50.; // CR = CircleRadius           
+        CR = 1./50.;
+        vec2 circ = calcCirc(CC, CR, bUV); // find distance from point to radius of circle, if <= radius then in circle
+        
+        if(circ.x + circ.y <= CR)
+        {
+            if(!(mod(floor(circ.x * 500.), 2.) == 0.))
+            {
+            	return vec4(1.,.6,0.,0.);    
+            }
+        }  
+    }
+    
+    
+    // Road
+	if(uv.y < -.2)
+    {          
+        float SquareSizeY = 10.;
+
+        float compX = floor(uv.x * 2.);
+        float compY = floor(uv.y * SquareSizeY);        
+        float sum = mod(compY, 2.);    
+        
+        for(float i = 0.; i < 4.; i++)
+        {
+            float DBP = .2; // distance between purple
+            float pos = mod(iTime, 2.0)-(.1+i+.3);
+            if(uv.x > pos - DBP && uv.x < pos+DBP)
+                return Black;
+        }
+        if(sum >= 1.) // if 1 then either one of these squares are in an even pos, if both then they both are and we dont want to colour that
+            return Black;
+        return vec4(1.,0.,1.,0.);
+	}
+    else if(uv.y >= -.2 && uv.y <= -.2)
+    {
+		return Black;
+    }
+    
+    
+    vec4 Purple = vec4(1.,0.,.7,0.);
+    vec4 Blk = Black;    
+    float interp = smoothstep(1., sin(iTime)/2.+-.9, uv.y);
+    
+    vec4 col = mix(Blk, Purple, interp);
+    return col;
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    fragColor = myEffect4(fragCoord, iResolution.xy);
+}

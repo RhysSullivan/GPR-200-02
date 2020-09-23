@@ -1,178 +1,96 @@
-//Code by Rhys Sullivan,
-//Referenced https://www.shadertoy.com/view/XlsGWf
-
-#define White vec4(1.0);  
-#define Black vec4(0.0);  
-#define Red vec4(1.0,0.0,0.0,0.0);
-
-/* Effect #0:
-Output the screen-space or UV coordinate as a static gradient.
-Produces a familiar pattern of black, red, green and yellow.  We'll start this one in class.*/
-vec4 myEffect0(in vec2 fragCoord, in vec2 resolution)
-{ 
-  	vec2 uv = fragCoord/iResolution.xy; // bring pixel coord into UV range of 0 to 1, i.e fragCoord.x = 233 / iResolution.x = 255 = 0.9137...
-    return vec4(uv.x, uv.y, 0., 1.0); // colors are changed based on the x,y position of the pixel from 0 to 1
+float vec4Length(vec4 rayDirection)
+{
+    return dot(rayDirection, rayDirection);
 }
 
-/*Effect #1: 
-Implement a static checkerboard pattern with perfectly square checkers
-Feel free to show the difference between pixel-size checkers and large squares, but the intent of this effect is the latter.*/
-vec4 myEffect1(in vec2 fragCoord, in vec2 resolution)
-{ 
-    vec2 uv = fragCoord / resolution; // normalize UV coords
-    uv.x *= resolution.x/resolution.y; // aspect ratio
-    
-    float SquareSize = 50.; // has to be >= 2
-   
-    float compX = floor(uv.x * SquareSize); // compX stands for compare x, in this case it takes a value like .23, brings it up to a size it can be modulused
-    float compY = floor(uv.y * SquareSize); // same but for y
-    
-    float sum = mod(compX, 2.); // checks for even position
-    sum += mod(compY, 2.);    
-    
-    if(sum >= 1. && sum < 2.) // if 1 then either one of these squares are in an even pos, if both then they both are and we dont want to colour that
-        return Black;
-    return White;
+vec4 at(in vec4 rayOrigin, in vec4 rayDirection, in float t){ return rayOrigin + t*rayDirection;}
+
+vec4 unitVector(in vec4 ray)
+{
+ return ray / dot(ray,ray);   
 }
 
-// Simple utility function to get the radius of a point relative to a circle, returns a vec
-// CC - Circle Center
-// UV - UV Coords
-// vec2 output - take x + y check if < radius to see if it is a circle, returns vec2 for flexability
-// r = (x-a)^2+(y-b)^2
-vec2 calcCirc(vec2 CC, vec2 uv)
-{    
-    float x = (uv.x - CC.x) * (uv.x - CC.x); // (x-a)^2
-    float y = (uv.y - CC.y) * (uv.y - CC.y); // (y-b)^2
-    return vec2(x,y);
-}
-
-/*Effect #2: Implement a circle whose color and size change over time.  
-The background color should be complementary to that of the circle.
-If you're feeling daring, color the circle with a radial gradient (from the center to the edge).*/
-vec4 myEffect2(in vec2 fragCoord, in vec2 resolution)
-{ 
-    vec2 uv = fragCoord / resolution;   
-    uv.x *= resolution.x/resolution.y; // normalize for aspect ratio      
-    
-    vec2 CC = vec2(.5,.5); // CC = CircleCenter
-    CC.x *= resolution.x/resolution.y; // adjust for aspect ratio
- 	float CR = .1+abs(cos(iTime))/10.; // CR = CircleRadius   
-    vec2 circ = calcCirc(CC, uv); // find distance from point to radius of circle, if <= radius then in circle
-     
-    if(circ.x + circ.y <= CR) // if this is <= CR then we are inside of the circle
+float hit_sphere(vec4 center, float radius, vec4 rayDirection, vec4 rayOrigin) 
+{
+    vec4 oc = rayOrigin - center;
+    float a = vec4Length(rayDirection);
+    float b = 2. * dot(oc, rayDirection);
+    float c = vec4Length(oc) - radius * radius;
+    float discriminant = b*b - 4.*a*c;
+	if (discriminant < 0.)
     {
-        float dif = CR - (circ.x + circ.y); // take the differnce between the radius of the circle and where the point is relative to the radius
-        dif = 1. / dif; // flip the dif so the colors go from out to in
-        dif *= .5 * CR; // Scale the dif to be in a usable range and multiply by the CR to allow it to change size
-		return vec4(dif, dif * .5,dif / .6,0.);
-    }    
-    
-    return vec4(uv.x, uv.y,abs(cos(1.)+.1),0.); // else return the background with some UV coloring
-}
-
-/*
-Effect #3: Implement a unique, full-screen psychedelic effect to morph colors and patterns all across the screen. 
-Use time and other uniforms to animate it.*/
-vec4 myEffect3(in vec2 fragCoord, in vec2 resolution)
-{ 
-    vec2 uv = fragCoord / resolution; // normalize UV coords  
-    uv.x *= resolution.x/resolution.y; // normalize for aspect ratio
-         
-    float rot = radians(270.0 + sin(iTime)*10.);  
-    
-    mat2 m = mat2(cos(rot), -sin(rot), sin(rot), cos(rot)); // build a rotation matrix, this is from 3d Math but I referenced https://www.shadertoy.com/view/XlsGWf
-    uv *= m; // apply rotation matrix to the UV coords
-        
-    
-    
-    for(float j = -1.5; j <= 1.; j += .1) // loop for circle y
+        return -1.0;
+    }
+    else
     {
-        for(float i = -2.; i <= 2.; i += .1) // loop for circle x
-        {            
-        	vec2 CC = vec2(i*(i+j),i+j); // CC = CircleCenter
-            CC.x *= resolution.x/resolution.y; // adjust for aspect ratio
-            float CR = abs(cos(iTime))/1000.; // CR = CircleRadius   
-            vec2 circ = calcCirc(CC, uv); // find distance from point to radius of circle, if <= radius then in circle
-
-            if(circ.x + circ.y <= CR)
-            {
-                return texture(iChannel0,uv); // sample a texture and color the 
-            }   
-        }
+     return (-b - sqrt(discriminant) ) / (2.0 * a);   
     }
-    return vec4(uv.x, 0., abs(sin(iTime)) + .8,0.); // return the background as a gradient that changes over the X pos
+    return 0.;
 }
 
-/*Effect #4: Additional Custom Effect
-Simple vapor wave style background with 3 suns, a moving road and a gradient background*/
-vec4 myEffect4(in vec2 fragCoord, in vec2 resolution)
-{ 
-    vec2 uv = fragCoord / resolution; // normalize UV coords  
-	uv-=.5; // bring everything back for a range of -.5 to .5
-    uv.x *= resolution.x/resolution.y; // normalize for aspect ratio
-    vec2 buv = uv; // seperate UV set for things that are rotated
-    float rot = radians(2.0 + sin(iTime)*5.); // define a rotation amount for the suns      
-    
-    mat2 m = mat2(cos(rot), -sin(rot), sin(rot), cos(rot)); // build a rotation matrix, this is from 3d Math but I referenced https://www.shadertoy.com/view/XlsGWf
-    buv *= m; // apply UV matrix
-    
-    float x = 0.; // x pos for the suns to be offset from       
-    for(float i = -.5; i <= .5; i+= .5)
-    {        
-        vec2 CC = vec2(x+i, 0.3 + abs(i) * -.4); // Circle Center is our X, added to an offset, and y translated down with some math
-
-        float CR = (.1+abs(cos(iTime)))/50.; // CR = CircleRadius           
-        CR = 1./50.;
-
-        vec2 circ = calcCirc(CC, buv); // find distance from point to radius of circle, if <= radius then in circle
-
-        if(circ.x + circ.y <= CR) // if circ.x + circ.y is <= CR then the offset is in the radius
-        {
-             if(CC.y - buv.y < 0.) // don't apply the sun modulus if we're not half way down
-             {
-                 return vec4(1.,.6,0.,0.); // return an orangey colour   
-             }
-             else if(!(mod(floor(circ.y * (abs(sin(iTime* 10.)) * 300.+ 500.)), 2.) == 0.)) // math to do the split parts of the sun, similar to checkboard
-             {
-                return vec4(1.,.6,0.,0.); // return an orangey colour   
-             }                     
-   		}
+vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin)
+{
+    float t = hit_sphere(vec4(0.,0.,-1.,1.), 0.5, rayDirection, rayOrigin);
+    if(t > 0.)
+    {
+     	vec4 N = unitVector(at(rayOrigin, rayDirection, t) - vec4(0.,0.,-1.,0.));
+        return 0.5*vec4(N.x + 1., N.y + 1., N.z + 1., 0.0);
     }
+    t = 0.5 *(unitVector(rayDirection).y + 1.0);
+    return (1.0-t)*vec4(1.0,1.0,1.0,1.0) + t*vec4(0.5,0.7,1.0,1.0);
+}
+
+void calcRay(out vec4 rayDirection, out vec4 rayOrigin, in vec2 viewport, in float focalLength)
+{
+    // ray origin relative to viewer is the origin
+    // w = 1 because it represents a point; can ignore when using
+    rayOrigin = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // ray direction relative to origin is based on viewing plane coordinate
+    // w = 0 because it represents a direction; can ignore when using
+    rayDirection = vec4(viewport.x, viewport.y, -focalLength, 0.0);
+}
+
+void calcViewport(out vec2 viewport, out vec2 ndc, out vec2 uv, out float aspect, out vec2 resolutionInv,in float viewportHeight, in vec2 fragCoord, in vec2 resolution)
+{
+    // inverse (reciprocal) resolution = 1 / resolution
+    resolutionInv = 1.0 / resolution;
     
-    // Road
-	if(uv.y < -.2)
-    {          
-        float SquareSizeY = 10.; // similar code to the grid tiles, smaller grid        
-        float compY = floor(uv.y * SquareSizeY); // only make a grid on the Y axis
-        float sum = mod(compY, 2.);  
-        
-        for(float i = 0.; i < 4.; i++) // offsets for drawing purple part of road
-        {
-            float DBP = .2; // distance between purple
-            float pos = mod(iTime, 2.0)-(.1+i+.3); // move the road 
-            if(uv.x > pos - DBP && uv.x < pos+DBP)
-                return Black;
-        }
-        if(sum >= 1.) // if 1 then either one of these squares are in an even pos, if both then they both are and we dont want to colour that
-            return Black;
-        return vec4(1.,0.,1.,0.); // return black where the road isn't
-	}
-    
-    
-     
-    vec4 Purple = vec4(1.,0.,.7,0.); // purple colouring
-    vec4 Blk = Black; //black
-    float interp = smoothstep(1., sin(iTime)/2.+-.9, uv.y); //interp between them for the background gradient using Y as the interp value
-    vec4 col = mix(Blk, Purple, interp); // do a mix of colours using the interp value
-    return col; 
+    // aspect ratio = screen width / screen height
+    aspect = resolution.x * resolutionInv.y;
+
+    // uv = screen-space coordinate = [0, 1) = coord / resolution
+    uv = fragCoord * resolutionInv;
+
+    // ndc = normalized device coordinate = [-1, +1) = uv*2 - 1
+    ndc = uv * 2.0 - 1.0;
+
+    // viewport: x = [-aspect*h/2, +aspect*h/2), y = [-h/2, +h/2)
+    viewport = ndc * (vec2(aspect, 1.0) * (viewportHeight * 0.5));
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    //fragColor = myEffect0(fragCoord, iResolution.xy);
-    //fragColor = myEffect1(fragCoord, iResolution.xy);
-    fragColor = myEffect2(fragCoord, iResolution.xy);
-    //fragColor = myEffect3(fragCoord, iResolution.xy);
-    //fragColor = myEffect4(fragCoord, iResolution.xy);
+    // viewing plane (viewport) info
+    vec2 viewport, ndc, uv, resolutionInv;
+    float aspect;
+    const float viewportHeight = 2.0, focalLength = 1.0;
+
+    // ray
+    vec4 rayDirection, rayOrigin;
+
+    // setup
+    calcViewport(viewport, ndc, uv, aspect, resolutionInv,
+                 viewportHeight, fragCoord, iResolution.xy);
+    calcRay(rayDirection, rayOrigin,
+            viewport, focalLength);
+
+    // color
+    fragColor = calcColor(rayDirection, rayOrigin);
+
+    // TEST COLOR:
+    //  -> what do the other things calculated above look like?
+    //fragColor = vec4(viewport, 0.0, 0.0);
+    //fragColor = vec4(ndc, 0.0, 0.0);
+    //fragColor = vec4(uv, 0.0, 0.0);
 }

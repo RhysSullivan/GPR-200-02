@@ -64,13 +64,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
    	// Setup of variables for the image 
     int samplesPerPixel = 50;
-    float seed = iDate.x;
-    vec4 rayDirection, rayOrigin, accCol;      
+    float seed = iDate.x; //seed for the random value
+    vec4 rayDirection, rayOrigin, accCol; //accCol is the accumulated colors
     for(int s = 0; s < samplesPerPixel; ++s)
     {                
     	calcViewport(seed, viewport, ndc, uv, aspect, resolutionInv, viewportHeight, fragCoord, iResolution.xy);
 	    calcRay(rayDirection, rayOrigin, viewport, focalLength);
-	    accCol += calcColor(seed, rayDirection, rayOrigin, spheres);	               
+	    accCol += calcColor(seed, rayDirection, rayOrigin, spheres); //add our subpixel color to the accumulated colors
     }    
     float scale = 1. / float(samplesPerPixel);
     accCol = sqrt(scale * accCol);
@@ -117,9 +117,9 @@ bool hit(FSphere sphere, vec4 rayDirection, vec4 rayOrigin, float t_min, float t
 
 bool hitWorld(FSphere spheres[NUM_SPHERES], vec4 rayDirection, vec4 rayOrigin, float t_min, float t_max, out FHitRecord hitRecord)
 {
-    FHitRecord temp_rec;
+    FHitRecord temp_rec; // temporary record
     bool hit_anything = false;
-    float closest_so_far = t_max;
+    float closest_so_far = t_max; // closest sphere we have hit
            
     for(int i = 0; i < NUM_SPHERES; ++i) // loop through all spheres in array, a cleaner implementation may allow for the ability to pass in abitrary objects but i was unsure how to do that w/out inheritance
     {
@@ -177,7 +177,7 @@ vec4 in_unit_sphere = randVec(seed); // allows for a uniform scatter depending o
 vec4 calcColor(in float seed, in vec4 rayDirection, in vec4 rayOrigin, FSphere spheres[NUM_SPHERES]){
     vec4 sumCol = vec4(1.); // variable to keep track of the loop results
     vec4 rD = rayDirection; // setup rD and rO to change in the loop
-    vec4 rO = rayOrigin;
+    vec4 rO = rayOrigin; // ray origin variable
     int i; // track outside of the loop to add in black where i > 48 etc
 	for(i = MAX_DEPTH; i >= 0; --i) // recursion is not supported, using this instead, starting at 50 for perf.
     {        

@@ -1,3 +1,4 @@
+#define NUM_SPHERES 3
 struct FSphere
 {
 	vec4 center;   
@@ -12,22 +13,31 @@ struct FHitRecord
     bool frontFace;
 };
 
-// function prototypes
+/*
+FUNCTION PROTOTYPES
+*/
+// objects
 bool hit(FSphere sphere, vec4 rayDirection, vec4 rayOrigin, float t_min, float t_max, out FHitRecord hitRecord);
-bool hitWorld(vec4 rayDirection, vec4 rayOrigin, float t_min, float t_max, out FHitRecord hitRecord);
+bool hitWorld(vec4 rayDirection, vec4 rayOrigin, float t_min, float t_max, out FHitRecord hitRecord, FSphere spheres[NUM_SPHERES]);
 
+// utility
 float vec4LengthSquared(vec4 rayDirection);
 vec4 at(in vec4 rayOrigin, in vec4 rayDirection, in float t);
 vec4 unitVector(in vec4 ray);
 void set_face_normal(out FHitRecord rec, vec4 rayDirection, vec4 rayOrigin, vec4 outward_normal);
-float rand(float seed) { return fract(sin(seed)*3000.*(iTime)); } // TODO: Change 3k
-float rand(vec2 seed){ return fract(sin(dot(seed.xy, vec2(12.9898,78.233)))* 43758.5453123);}
+float rand(out float seed);
+vec4 randVec(out float seed);
+vec4 randomInUnitSphere(float seed);
 
-void calcViewport(out vec2 viewport, out vec2 ndc, out vec2 uv, out float aspect, out vec2 resolutionInv,in float viewportHeight, in vec2 fragCoord, in vec2 resolution);
+// image
+void calcViewport(out float seed, out vec2 viewport, out vec2 ndc, out vec2 uv, out float aspect, out vec2 resolutionInv,in float viewportHeight, in vec2 fragCoord, in vec2 resolution);
 void calcRay(out vec4 rayDirection, out vec4 rayOrigin, in vec2 viewport, in float focalLength);
-vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin);
+vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, FSphere spheres[NUM_SPHERES]);
 
 
+/*
+MAIN IMAGE
+*/
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // viewing plane (viewport) info
@@ -38,24 +48,36 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // ray
     vec4 rayDirection, rayOrigin;
 
-    // setup
-    calcViewport(viewport, ndc, uv, aspect, resolutionInv,
-                 viewportHeight, fragCoord, iResolution.xy);
-    calcRay(rayDirection, rayOrigin,
-            viewport, focalLength);
-
-    int samplesPerPixel = 100;
+  
+     
+    FSphere spheres[NUM_SPHERES];
+    spheres[0].center = vec4(sin(iTime),0.,-1.5+-abs(cos(iTime)),1.);
+    spheres[0].radius = .5;
+    spheres[1].center = vec4(sin(iTime),1.,-1.5+-abs(sin(iTime)),1.);
+    spheres[1].radius = .5;            
+    spheres[2].center = vec4(0.,-100.5,-1.,1.);
+    spheres[2].radius = 100.;
     
+    
+    
+    int samplesPerPixel = 1;    
+    int maxDepth = 50;
     vec4 accCol;
+    float seed = 100000000.;
     
     for(int s = 0; s < samplesPerPixel; ++s)
     {                
-        accCol += calcColor(rayDirection, rayOrigin);	               
+            	// setup
+    	calcViewport(seed, viewport, ndc, uv, aspect, resolutionInv, viewportHeight, fragCoord, iResolution.xy);
+	    calcRay(rayDirection, rayOrigin, viewport, focalLength);
+	    accCol += calcColor(rayDirection, rayOrigin, spheres);	               
     }    
     accCol /= float(samplesPerPixel);
 	fragColor = accCol;
 }
 
+
+// objects
 bool hit(FSphere sphere, vec4 rayDirection, vec4 rayOrigin, float t_min, float t_max, out FHitRecord rec)
 { 
     vec4 oc = rayOrigin - sphere.center;
@@ -91,19 +113,13 @@ bool hit(FSphere sphere, vec4 rayDirection, vec4 rayOrigin, float t_min, float t
     return false;        
 }
 
-bool hitWorld(vec4 rayDirection, vec4 rayOrigin, float t_min, float t_max, out FHitRecord hitRecord)
+bool hitWorld(FSphere spheres[NUM_SPHERES], vec4 rayDirection, vec4 rayOrigin, float t_min, float t_max, out FHitRecord hitRecord)
 {
     FHitRecord temp_rec;
     bool hit_anything = false;
     float closest_so_far = t_max;
-    
-    
-    FSphere spheres[2];
-    spheres[0].center = vec4(0.,0.,-1.,1.);
-    spheres[0].radius = .5;
-    spheres[1].center = vec4(0.,-100.5,-1.,1.);
-    spheres[1].radius = 100.;
-    for(int i = 0; i < 2; ++i)
+           
+    for(int i = 0; i < NUM_SPHERES; ++i)
     {
         FSphere sphere = spheres[i];				    
     	if(hit(sphere, rayDirection, rayOrigin, t_min, closest_so_far, temp_rec))
@@ -116,30 +132,40 @@ bool hitWorld(vec4 rayDirection, vec4 rayOrigin, float t_min, float t_max, out F
     return hit_anything;
 }
 
-void set_face_normal(out FHitRecord rec, vec4 rayDirection, vec4 rayOrigin, vec4 outward_normal)
-{
+// utility
+float vec4LengthSquared(vec4 rayDirection){
+    return dot(rayDirection, rayDirection);
+}
+
+vec4 at(in vec4 rayOrigin, in vec4 rayDirection, in float t){
+    return rayOrigin + t*rayDirection;
+}
+
+vec4 unitVector(in vec4 ray){
+ return ray / length(ray);
+}
+
+void set_face_normal(out FHitRecord rec, vec4 rayDirection, vec4 rayOrigin, vec4 outward_normal){
     rec.frontFace = dot(rayDirection, outward_normal) < 0.;
     rec.normal = rec.frontFace ? outward_normal : -outward_normal;
 }
 
-
-
-float vec4LengthSquared(vec4 rayDirection)
-{
-    return dot(rayDirection, rayDirection);
+float rand(out float seed){
+    float random = (fract(sin(seed) * 100000.0f)-0.5) * 2.0;
+    seed++;
+    return random;
 }
 
-vec4 at(in vec4 rayOrigin, in vec4 rayDirection, in float t){ return rayOrigin + t*rayDirection;}
-
-vec4 unitVector(in vec4 ray)
-{
- return ray / vec4LengthSquared(ray);   
+vec4 randVec(out float seed){
+    return vec4(rand(seed), -rand(seed), rand(seed), 0.);
 }
 
-vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin)
-{
-    FHitRecord rec;
-    if( hitWorld(rayDirection, rayOrigin, 0., 1000000000., rec) )
+
+// image
+
+vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, FSphere spheres[NUM_SPHERES]){
+   FHitRecord rec;
+    if( hitWorld(spheres, rayDirection, rayOrigin, 0., 1000000000., rec) )
     {
         return .5 * (rec.normal + vec4(1.));
     }
@@ -147,8 +173,7 @@ vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin)
     return (1.0-t)*vec4(1.0,1.0,1.0,1.0) + t*vec4(0.5,0.7,1.0,1.0);
 }
 
-void calcRay(out vec4 rayDirection, out vec4 rayOrigin, in vec2 viewport, in float focalLength)
-{
+void calcRay(out vec4 rayDirection, out vec4 rayOrigin, in vec2 viewport, in float focalLength){
     // ray origin relative to viewer is the origin
     // w = 1 because it represents a point; can ignore when using
     rayOrigin = vec4(0.0, 0.0, 0.0, 1.0);
@@ -158,8 +183,7 @@ void calcRay(out vec4 rayDirection, out vec4 rayOrigin, in vec2 viewport, in flo
     rayDirection = vec4(viewport.x, viewport.y, -focalLength, 0.0);
 }
 
-void calcViewport(out vec2 viewport, out vec2 ndc, out vec2 uv, out float aspect, out vec2 resolutionInv,in float viewportHeight, in vec2 fragCoord, in vec2 resolution)
-{
+void calcViewport(out float seed, out vec2 viewport, out vec2 ndc, out vec2 uv, out float aspect, out vec2 resolutionInv,in float viewportHeight, in vec2 fragCoord, in vec2 resolution){
     // inverse (reciprocal) resolution = 1 / resolution
     resolutionInv = 1.0 / resolution;
     
@@ -169,9 +193,9 @@ void calcViewport(out vec2 viewport, out vec2 ndc, out vec2 uv, out float aspect
     // uv = screen-space coordinate = [0, 1) = coord / resolution
     uv = fragCoord * resolutionInv;
     
-    // subpixel sampling
-    uv.x += rand(uv.x) * resolutionInv.x;
-	uv.y += rand(uv.y) * resolutionInv.y;
+    // subpixel sampling   
+    uv.x += rand(seed) * resolutionInv.x;
+	uv.y += rand(seed) * resolutionInv.y;
     
     // ndc = normalized device coordinate = [-1, +1) = uv*2 - 1
     ndc = uv * 2.0 - 1.0;

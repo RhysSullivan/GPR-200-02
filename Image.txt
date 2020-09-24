@@ -1,4 +1,6 @@
 #define NUM_SPHERES 3
+#define CELL_SHADE false
+#define MAX_DEPTH 50
 struct FSphere
 {
 	vec4 center;   
@@ -44,25 +46,26 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 viewport, ndc, uv, resolutionInv;
     float aspect;
     const float viewportHeight = 2.0, focalLength = 1.0;
-
-    // ray
-    vec4 rayDirection, rayOrigin;  
-     
+    
+    // time from 0 to 5, hard reset back to 5
+	float t = mod(iTime, 5.);     
+    //-2.5 to 2.5 is our range of x values in the camera    
+    float x = -2.5 + (t) * 2.5;
+    float y = abs( (sin(x * 3.) / (mod(x, 2.) + 1.) )) / 55.; // ugly math for a cute bounce
+    y *= 30.; // add scale to the y value
+    
     FSphere spheres[NUM_SPHERES];
-    spheres[0].center = vec4(sin(iTime),0.,-1.5+-abs(cos(iTime)),1.);
+    spheres[0].center = vec4(x,y,-1.,1.);
     spheres[0].radius = .5;
-    spheres[1].center = vec4(sin(iTime),1.,-1.5+-abs(sin(iTime)),1.);
+    spheres[1].center = vec4(x-2.5,y,-1.7,1.);
     spheres[1].radius = .5;            
     spheres[2].center = vec4(0.,-100.5,-1.,1.);
-    spheres[2].radius = 100.;
+    spheres[2].radius = 100.;    
     
-    
-    
-    int samplesPerPixel = 100;    
-    int maxDepth = 50;
-    vec4 accCol;
+   	// Setup of variables for the image 
+    int samplesPerPixel = 50;
     float seed = iDate.x;
-    
+    vec4 rayDirection, rayOrigin, accCol;      
     for(int s = 0; s < samplesPerPixel; ++s)
     {                
     	calcViewport(seed, viewport, ndc, uv, aspect, resolutionInv, viewportHeight, fragCoord, iResolution.xy);
@@ -74,20 +77,20 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	fragColor = accCol;
 }
 
-
 // objects
 bool hit(FSphere sphere, vec4 rayDirection, vec4 rayOrigin, float t_min, float t_max, out FHitRecord rec)
 { 
-    vec4 oc = rayOrigin - sphere.center;
-    float a = vec4LengthSquared(rayDirection);
+    vec4 oc = rayOrigin - sphere.center; // vector from the ray origin to the center
+    float a = vec4LengthSquared(rayDirection); 
     float half_b = dot(oc, rayDirection);
     float c = vec4LengthSquared(oc) - (sphere.radius * sphere.radius);
-    float discriminant = half_b*half_b - a*c;
+    float discriminant = half_b*half_b - a*c; // this block of code is representing the sphere intersection equation
     
 	if (discriminant > 0.)
     {
         float root = sqrt(discriminant);
-        
+		
+		// Rays hitting outside of the sphere        
         float temp = (-half_b - root) / a; 
         if(temp < t_max && temp > t_min)
         {           
@@ -97,7 +100,8 @@ bool hit(FSphere sphere, vec4 rayDirection, vec4 rayOrigin, float t_min, float t
             set_face_normal(rec, rayDirection, rayOrigin, outward_normal);                                                
             return true;
         }
-        
+
+        // Handle being inside of the sphere 
         temp = (-half_b + root) / a;
         if(temp < t_max && temp > t_min)
         {
@@ -117,7 +121,7 @@ bool hitWorld(FSphere spheres[NUM_SPHERES], vec4 rayDirection, vec4 rayOrigin, f
     bool hit_anything = false;
     float closest_so_far = t_max;
            
-    for(int i = 0; i < NUM_SPHERES; ++i)
+    for(int i = 0; i < NUM_SPHERES; ++i) // loop through all spheres in array, a cleaner implementation may allow for the ability to pass in abitrary objects but i was unsure how to do that w/out inheritance
     {
         FSphere sphere = spheres[i];				    
     	if(hit(sphere, rayDirection, rayOrigin, t_min, closest_so_far, temp_rec))
@@ -132,15 +136,15 @@ bool hitWorld(FSphere spheres[NUM_SPHERES], vec4 rayDirection, vec4 rayOrigin, f
 
 // utility
 float vec4LengthSquared(vec4 rayDirection){
-    return dot(rayDirection, rayDirection);
+    return dot(rayDirection, rayDirection); // wrapper function for flexability
 }
 
 vec4 at(in vec4 rayOrigin, in vec4 rayDirection, in float t){
-    return rayOrigin + t*rayDirection;
+    return rayOrigin + t*rayDirection; // walk up the ray direction to the time
 }
 
 vec4 unitVector(in vec4 ray){
- return ray / length(ray);
+ return ray / sqrt(vec4LengthSquared(ray)); // ew sqrt, has to be done for the normalized vector length
 }
 
 void set_face_normal(out FHitRecord rec, vec4 rayDirection, vec4 rayOrigin, vec4 outward_normal){
@@ -149,13 +153,13 @@ void set_face_normal(out FHitRecord rec, vec4 rayDirection, vec4 rayOrigin, vec4
 }
 
 float rand(out float seed){
-    float random = (fract(sin(seed) * 100000.0f)-0.5) * 2.0;
+    float random = (fract(sin(seed) * 100000.0f)-0.5) * 2.0; // referenced: https://thebookofshaders.com/10/
     seed++;
     return random;
 }
 
-vec4 randVec(out float seed){
-      while(true){
+vec4 randVec(out float seed){ 
+    while(true){
         vec4 p = vec4(rand(seed), rand(seed), rand(seed), 0.);
         if (dot(p, p) >= 1.0f) continue;
         return p;
@@ -163,7 +167,7 @@ vec4 randVec(out float seed){
 }
 
 vec4 randomInHemisphere(vec4 normal, in float seed){
- vec4 in_unit_sphere = randVec(seed);
+vec4 in_unit_sphere = randVec(seed); // allows for a uniform scatter depending on the hit point
     if (dot(in_unit_sphere, normal) > 0.0) // In the same hemisphere as the normal
         return in_unit_sphere;
     else
@@ -171,26 +175,25 @@ vec4 randomInHemisphere(vec4 normal, in float seed){
 }
 // image
 vec4 calcColor(in float seed, in vec4 rayDirection, in vec4 rayOrigin, FSphere spheres[NUM_SPHERES]){
-    vec4 sumCol = vec4(1.);
-    vec4 rD = rayDirection;
+    vec4 sumCol = vec4(1.); // variable to keep track of the loop results
+    vec4 rD = rayDirection; // setup rD and rO to change in the loop
     vec4 rO = rayOrigin;
-    int i;
-	for(i = 0; i < 50; i++)
+    int i; // track outside of the loop to add in black where i > 48 etc
+	for(i = MAX_DEPTH; i >= 0; --i) // recursion is not supported, using this instead, starting at 50 for perf.
     {        
 		FHitRecord rec;
     	if( hitWorld(spheres, rD, rO, 0.001, 100000000000000., rec) )
     	{
-            vec4 target = rec.p + randomInHemisphere(rec.normal, seed);
-            rO = rec.p;
+            vec4 target = rec.p + randomInHemisphere(rec.normal, seed); // our target point is our ray origin + some random bounce direction
+            rO = rec.p; // update rO and rD to reflect the new random bounce
             rD = target - rec.p;
-    	    sumCol *= .5;                        
+    	    sumCol *= .5; // lower the amount of lighting we get from the world per bounce                        
     	}
         else
-        	break;
-          
+        	break; // no hit means no bounce so we're done with the loop.
     }        
-    float t = 0.5 *(unitVector(rD).y + 1.0);
-    sumCol *= (1.0-t)*vec4(.0,.0,1.0,1.0) + t*vec4(0.9,0.2,.0,1.0); 
+    float t = 0.5 *(unitVector(rD).y + 1.0); // get our t value from our position of the ray,
+    sumCol *= mix(vec4(.0,.0,1.0,1.0),vec4(0.9,0.2,.0,1.0), t);  
     return sumCol;
 }
 

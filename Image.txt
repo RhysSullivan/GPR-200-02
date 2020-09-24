@@ -1,3 +1,5 @@
+//Code by Rhys Sullivan,
+// referenced: https://thebookofshaders.com/10/
 #define NUM_SPHERES 3
 #define CELL_SHADE false
 #define MAX_DEPTH 50

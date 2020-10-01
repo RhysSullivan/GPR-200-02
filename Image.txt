@@ -70,22 +70,25 @@ float lenSq(vec2 x)
  return dot(x,x);   
 }
 
+float diffuseIntensity(vec3 norm, vec3 pos, vec3 L, FPointLight pLight)
+{
+ float difCoeff = dot(norm, vec3(L)); 	
+ float d = length(vec3(pLight.center) - pos);
+ float iL = pLight.intensity;
+ float d2 = d * d;
+ float iL2 = iL * iL;
+ float intensity = 1./(1. + d/iL + d2 / iL);
+ return intensity * difCoeff; 		 		   
+}
+
 vec4 lambertianReflectance(vec3 pos, vec3 norm, FPointLight pLight)
 {
  	// Diffuse Coefficient
- 	vec4 L = normalize(pLight.center - vec4(pos,0.));        
- 	float difCoeff = dot(norm, vec3(L));
- 	
- 	// Attenuation
- 	float d = length(vec3(pLight.center) - pos);
- 	float iL = pLight.intensity;
- 	float d2 = d * d;
- 	float iL2 = iL * iL;
- 	float intensity = 1./(1. + d/iL + d2 / iL);
- 	float difIntensity = intensity * difCoeff;
- 	vec3 difColor = vec3(1.);
+ 	vec3 L = normalize(vec3(pLight.center) - pos);        
+ 	float iD = diffuseIntensity(norm, pos, L, pLight); 	 
+    vec3 difColor = vec3(1.);
  	vec3 lightCol = vec3(pLight.color);
- 	return vec4(difIntensity * difColor * lightCol, 0.);   
+ 	return vec4(iD * difColor * lightCol, 0.);   
 }
 
 vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin)
@@ -108,34 +111,26 @@ vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin)
         
         // Lambertian Reflectance
         FPointLight pLight;
-        initPointLight(pLight, vec4(2.,2.,-1.,1.), vec4(.2,.6,2.,0.), 150.);                
+        //initPointLight(pLight, vec4(2.,2.,-1.,1.), vec4(.8,.2,0.,0.), 15.);                
+        initPointLight(pLight, vec4(2.,2.,-1.,1.), vec4(1.), 10.);                
         //return lambertianReflectance(pos, norm, pLight);
         
         
         // Phong Reflectance
-        vec3 L = normalize(pos - vec3(pLight.center)); // Light Vector        
-        vec3 V = normalize(pos - vec3(rayOrigin)); // View Vector
+        vec3 L = normalize(vec3(pLight.center) - pos); // Light Vector        
+        vec3 V = normalize(vec3(rayOrigin) - pos); // View Vector
         vec3 R = reflect(-L, norm);
         float kS = dot(V,R);
         kS = max(0., kS);               
-        float iS = pow(kS, 2.);
+        float iS = pow(kS, 8.);
+                
+        float iA = .1; // global ambient intensity
+        vec3 cA = vec3(0.,0.,.2); // global ambient coor                
+ 		float iD = diffuseIntensity(norm, pos, L, pLight); // Light Diffuse Intensity        
+        vec3 cD = vec3(norm); // Diffuse Reflection of Surface
+        vec3 cS = vec3(1.); // Specular Reflection Color
+        vec3 cL = vec3(pLight.color); // Light Color        
         
-        
-        float iA = 1.;
-        vec3 cA = vec3(1.);        
-        // iD start
-        float difCoeff = dot(norm, vec3(L)); 	 		
- 		float d = length(vec3(pLight.center) - pos);
- 		float iL = pLight.intensity;
- 		float d2 = d * d;
- 		float iL2 = iL * iL;
- 		float intensity = 1./(1. + d/iL + d2 / iL);
- 		float difIntensity = intensity * difCoeff;
-        float iD = intensity * difIntensity;
-        // iD end        
-        vec3 cD = vec3(1.);
-        vec3 cS = vec3(1.);
-        vec3 cL = vec3(pLight.color);
         return vec4( (iA*cA+(iD*cD+iS*cS)*cL), 1.);
         
     }

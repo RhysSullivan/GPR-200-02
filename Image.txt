@@ -3,11 +3,11 @@
 struct FPointLight
 {
  	vec4 center;
-    vec4 color;
+    vec3 color;
     float intensity;
 };
     
-void initPointLight(out FPointLight pLight, vec4 center, vec4 color, float intensity)
+void initPointLight(out FPointLight pLight, vec4 center, vec3 color, float intensity)
 {
     pLight.center = center;
     pLight.color = color;
@@ -81,22 +81,41 @@ float diffuseIntensity(vec3 norm, vec3 pos, vec3 L, FPointLight pLight)
  return intensity * difCoeff; 		 		   
 }
 
-vec4 lambertianReflectance(vec3 pos, vec3 norm, FPointLight pLight)
-{
- 	// Diffuse Coefficient
+float lambertianReflectance(vec3 pos, vec3 norm, FPointLight pLight)
+{ 	
  	vec3 L = normalize(vec3(pLight.center) - pos);        
  	float iD = diffuseIntensity(norm, pos, L, pLight); 	 
-    vec3 difColor = vec3(1.);
- 	vec3 lightCol = vec3(pLight.color);
- 	return vec4(iD * difColor * lightCol, 0.);   
+    return iD;
+    //vec3 difColor = vec3(norm*.5+.5);
+ 	//vec3 lightCol = vec3(pLight.color);
+ 	//return vec4(iD * difColor * lightCol, 0.);   
+}
+
+float phongReflectance(vec3 pos, vec3 norm, FPointLight pLight, vec3 rayOrigin)
+{
+   // Phong Reflectance
+   vec3 L = normalize(vec3(pLight.center) - pos); // Light Vector        
+   vec3 V = normalize(rayOrigin - pos); // View Vector
+   vec3 R = reflect(-L, norm);
+   float kS = dot(V,R);   
+   kS = max(kS, 0.);
+    
+   float iS = pow(kS, 16.);
+   return iS;
+}
+
+float blinnPhongReflectance(vec3 pos, vec3 norm, FPointLight pLight, vec3 rayOrigin)
+{
+   vec3 V = normalize(vec3(rayOrigin) - pos);
+   vec3 L = normalize(vec3(pLight.center) - pos); 
+   vec3 H = normalize(L+V);
+   float kS = dot(norm,H);
+   float iS = pow(kS, 128.0); 
+   return iS;
 }
 
 vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin)
 {
-    // DUMMY RESULT: OUTPUT RAY DIRECTION AS-IS
-    //  -> what does the ray look like as color?
-    //return rayDirection;
-	
 	FSphere sphere;
     initSphere(sphere, vec3(0.,0., -4.), .4);
     vec3 dp;
@@ -107,39 +126,56 @@ vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin)
     {
 		dp.z = rSq - (sqLen);
 		vec3 pos = sphere.center.xyz + vec3(dp.x, dp.y, sqrt(dp.z));
-        vec3 norm = (pos - sphere.center.xyz) / sphere.radius;
+        vec3 norm = (pos - sphere.center.xyz) / sphere.radius;                
         
-        // Lambertian Reflectance
-        FPointLight pLight;
-        //initPointLight(pLight, vec4(2.,2.,-1.,1.), vec4(.8,.2,0.,0.), 15.);                
-        initPointLight(pLight, vec4(2.,2.,-1.,1.), vec4(1.), 10.);                
-        //return lambertianReflectance(pos, norm, pLight);
-        
-        
-        // Phong Reflectance
-        vec3 L = normalize(vec3(pLight.center) - pos); // Light Vector        
-        vec3 V = normalize(vec3(rayOrigin) - pos); // View Vector
-        vec3 R = reflect(-L, norm);
-        float kS = dot(V,R);
-        kS = max(0., kS);               
-        float iS = pow(kS, 8.);
-                
-        float iA = .1; // global ambient intensity
-        vec3 cA = vec3(0.,0.,.2); // global ambient coor                
- 		float iD = diffuseIntensity(norm, pos, L, pLight); // Light Diffuse Intensity        
-        vec3 cD = vec3(norm); // Diffuse Reflection of Surface
-        vec3 cS = vec3(1.); // Specular Reflection Color
-        vec3 cL = vec3(pLight.color); // Light Color        
-        
-        return vec4( (iA*cA+(iD*cD+iS*cS)*cL), 1.);
-        
+        #define NUM_LIGHTS 3
+        FPointLight[NUM_LIGHTS] pLights;
+        initPointLight(pLights[0],
+                       vec4(1.,2.,cos(iTime*3.)*-4.,1.), 
+                       vec3(.8,.6,0.),
+                       20.);
+        initPointLight(pLights[1],
+                       vec4(30.,sin(iTime*3.)*-2.,20.,1.), 
+                       vec3(.0,.0,.8), 
+                       20.);
+        initPointLight(pLights[2],
+                       vec4(sin(iTime*3.)*10.,-10.,0.,1.),
+                       vec3(.8,.0,.8),
+                       20.);        
+        vec3 sumCol;
+        float iA = .3;
+		vec3 cA = vec3(1.);
+        for(int i = 0; i < NUM_LIGHTS; ++i)
+        {
+            // ID Start
+            vec3 L = normalize(vec3(pLights[i].center) - pos);        
+            float difCoeff = dot(norm, vec3(L)); 	
+ 			float d = length(vec3(pLights[i].center) - pos);
+ 			float iL = pLights[i].intensity;
+ 			float d2 = d * d;
+ 			float iL2 = iL * iL;
+ 			float intensity = 1./(1. + d/iL + d2 / iL);
+ 			float iD =  intensity * difCoeff; 	             			
+            // ID END
+            vec3 cD  = vec3(norm * .5 + .5);
+            
+            // IS Start
+   			vec3 V = normalize(vec3(rayOrigin) - pos); // View Vector
+   			vec3 R = reflect(-L, norm);
+   			float kS = dot(V,R);   
+   			kS = max(kS, 0.);
+    
+   			float iS = pow(kS, 16.);
+   			                        
+            vec3 cS  = vec3(1.);            
+            sumCol  += ((iD * cD) + (iS * cS)) * pLights[i].color;
+        } 
+        sumCol += (iA * cA);
+        return vec4(sumCol,1.);
     }
 	return vec4(.2);
 }
 
-// mainImage: process the current pixel (exactly one call per pixel)
-//    fragColor: output final color for current pixel
-//    fragCoord: input location of current pixel in image (in pixels)
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     // viewing plane (viewport) info

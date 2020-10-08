@@ -172,22 +172,31 @@ color4 crossFade(in sViewport vp, in color4 a, in color4 b)
     return mix(a,b, blend);
 }
 
-sCoord waveDistortion(sCoord vp)
-{ 
-    float waveFreq = 5.;
-    float waveHeight = 20.;
-    vp.y += (sin(vp.x*waveFreq)/waveHeight);
-	return vp;	   
+sCoord waveDistortion(sCoord vp, float waveFreq, float waveHeight)
+{    
+    vp.y += sin(vp.x*waveFreq)/waveHeight; // simple sin wave setup that adjusts based on x coor
+    return vp;
 }
 
-color4 wormholeDistortion(sCoord vp)
-{
-    float scrollSpeed = -3.;
-    vec2 sphereCenter = vec2(.9,.5);
-   	vec2 warp = sphereCenter * pow(distance(sphereCenter, vp),-2.) * .02;       
-    vp += warp;      
-    return texture(iChannel3, vp + iTime) * pow(distance(sphereCenter, vp),-2.) * .2 + .2;    
- 	
+// Referenced: https://godotengine.org/qa/13023/shaders-how-does-one-create-blackhole-effect-using-shaders
+color4 wormholeDistortion(in sViewport vp)
+{    
+   vec2 center = vec2(0.,0.); // sphere location
+   float p = 0.01; // radius
+   vec2 diff = center - vp.ndc;
+   diff.x *= vp.aspectRatio; // adjust radius of sphere for aspect ratio
+    
+   float d = length(diff); // distance from the sphere center to our uv coord
+   float invD = 1./d;
+   vec2 dir = diff * invD; // get the direction for light bending, used cache d value
+   
+   // radius / distance^2  sets us up for the closer we are, the more distortion
+   // vpc.ndc puts us in the space to distort, dir tells us what direction to distort in
+   vec2 uv = vp.ndc + dir * (p * (invD*invD + .002)); 
+    
+   uv += iTime; // move the background
+   d = step(.2,d); // proably the same as doing an if statement
+   return texture(iChannel3, uv) * d;  // return distorted image      
 }
 
 // referenced: https://prideout.net/barrel-distortion
@@ -195,7 +204,7 @@ sCoord barrelDistortion(in sViewport vp)
 {    	        
     // barrel distortion
 	sCoord p = vp.ndc;
-	sScalar theta  = atan(p.y, p.x);
+	sScalar theta  = atan(p.y, p.x); 
     sScalar radius = length(p);
     radius = pow(radius, 2.);
     p.x = radius * cos(theta);
@@ -203,25 +212,29 @@ sCoord barrelDistortion(in sViewport vp)
     return p;
 }
 
+sScalar diffuseIntensity(sBasis surfacePosition, sBasis surfaceNormal, sBasis lightPos, sScalar lightInten)
+{
+ 	sScalar kD; // diffuse coefficient
+    sScalar iL; // Attenuation    
+	sBasis L = normalize(lightPos - surfacePosition); // light position
+    
+    kD = dot(surfaceNormal, L); // check how aligned the light and normal are
+    kD = max(0., kD);
+	sScalar d = length(lightPos - surfacePosition);
+    
+    iL = 1. / (1. + (d / lightInten) + ( (d * d) / (lightInten * lightInten) ));   
+    return kD * iL;
+}
+
 color4 shading(in sViewport vp)
 {
     sBasis surfacePosition = vec3(vp.ndc, 1.);
     sBasis surfaceNormal = normalize(vec3(vp.ndc, 1.));   
-    sBasis lightPos = sBasis(sin(iTime*6.),cos(iTime*6.), 2.);
-    	
-    sScalar kD; // diffuse coefficient
-    sScalar iL; // Attenuation
-    sScalar lightIntensity = 100.;
-	sBasis L = normalize(lightPos - surfacePosition);
-    
-    kD = dot(surfaceNormal, L);
-    kD = max(0., kD);
-	sScalar d = length(lightPos - surfacePosition);
-    iL = 1. / (1. + (d / lightIntensity) + ( (d * d) / (lightIntensity * lightIntensity) ));
+    sBasis lightPos = sBasis(sin(iTime*6.),cos(iTime*6.), 2.);    	    
     
     color4 cL = color4(1.);
     color4 cD = texture(iChannel2, vp.ndc);
-    sScalar iD = kD * iL; // diffuse intensity
+    sScalar iD = diffuseIntensity(surfacePosition, surfaceNormal, lightPos, 200.); // diffuse intensity
     return cL * cD * iD;	
 }
 
@@ -235,19 +248,27 @@ color4 cubeMap(in sRay ray, in sViewport vp)
 	const float pi = 3.14;
     if(iMouse.z > 0.)
     {           
-        vec3 dir = ray.direction.xyz;         
-        vec2 mouse = (iMouse.xy * vp.resolutionInv);
-        vec2 theta = (mouse * 2. * pi) - 1.; 
-    	mat2 mX = mat2(cos(theta.x), -sin(theta.x), sin(theta.x), cos(theta.x));    
-        mat2 mY = mat2(cos(theta.y), -sin(theta.y), sin(theta.y), cos(theta.y));            
-        dir.zy *= -mY;
-        dir.zx *= mX;
-    	return texture(iChannel1, dir);
-    }
+        vec3 dir = ray.direction.xyz; // base direction for the ray      
+        vec2 mouse = (iMouse.xy * vp.resolutionInv); // normalized mouse coordinates
+        vec2 theta = (mouse * 2. * pi) - 1.; // theta represents the angle that we are rotating at, this maps x to be from -1 to 2pi-1
+    	mat2 mX = mat2(cos(theta.x), -sin(theta.x), sin(theta.x), cos(theta.x)); // rotation matrix for x    
+        mat2 mY = mat2(cos(theta.y), -sin(theta.y), sin(theta.y), cos(theta.y)); // rotation matrix for y
+        dir.zy *= -mY; // unflip rotation and apply y rotation
+        dir.zx *= mX; // apply x rotation
+        
+        sBasis surfacePosition = dir; // reset this variable for readability
+    	sBasis surfaceNormal = normalize(dir); 
+    	sBasis lightPos = sBasis(sin(iTime)*3.,cos(iTime)*3., 2.);    	    
     
+    	color4 cL = color4(1.); // light color
+    	color4 cD = texture(iChannel1, dir); // color of surface
+    	sScalar iD = diffuseIntensity(surfacePosition, surfaceNormal, lightPos, 200.); // diffuse intensity
+    	return cL * cD * (iD+.1); // add .1 for ambient light, calc final color    
+    	return texture(iChannel1, dir);
+    }    
     
 	vec3 cubeLoc = ray.direction.xyz;
-	cubeLoc.xy = waveDistortion(cubeLoc.xy);
+	cubeLoc.xy = waveDistortion(cubeLoc.xy, 5., 5.);
 	float rot = sin(iTime/1000.)*360.;      
     mat2 m = mat2(cos(rot), -sin(rot), sin(rot), cos(rot));
     cubeLoc.xz *= m;
@@ -276,12 +297,14 @@ color4 calcColor(in sViewport vp, in sRay ray)
     
     
     color4 a = texture(iChannel0, loc);
-    color4 b = texture(iChannel2, loc);
+    color4 b = texture(iChannel2, loc);    
+    color4 c = texture(iChannel0, waveDistortion(loc, 5., 5.));
+    color4 d = texture(iChannel0, barrelDistortion(vp));
     //return crossFade(vp, a, b);
-    color4 c = texture(iChannel0, waveDistortion(loc));
     //return crossFade(vp, a, c);
+    //return crossFade(vp, a, d);
  	//return shading(vp);   
-   	//return wormholeDistortion(loc);
+   	return wormholeDistortion(vp);
 	return cubeMap(ray, vp);
 }
 

@@ -267,14 +267,35 @@ color4 cubeMap(in sRay ray, in sViewport vp)
     	return texture(iChannel1, dir);
     }    
     
-	vec3 cubeLoc = ray.direction.xyz;
+	vec3 cubeLoc = ray.direction.xyz; // infinite direction on our ray out into 3d space
 	cubeLoc.xy = waveDistortion(cubeLoc.xy, 5., 5.);
-	float rot = sin(iTime/1000.)*360.;      
+	float rot = sin(iTime/1000.)*360.; // basic rotation matrix
     mat2 m = mat2(cos(rot), -sin(rot), sin(rot), cos(rot));
     cubeLoc.xz *= m;
     return texture(iChannel1, cubeLoc);    
 }
 
+color4 sphere(in sViewport vp, in sRay ray)
+{
+    vec3 dp; // displacement
+    vec3 center = vec3(0.,0.,0.);           	    
+    vec3 lP = vec3(sin(iTime),cos(iTime)*20.,8.);
+    float radius = .3;
+    dp.xy = ray.direction.xy - center.xy;
+    float sqLen = dot(dp.xy, dp.xy); // optimizaiton with the square length precalc
+    float rSq = radius * radius;
+    if(sqLen <= rSq)
+    {
+		dp.z = rSq - (sqLen);
+		vec3 pos = center.xyz + vec3(dp.x, dp.y, sqrt(dp.z));        
+        vec3 norm = (pos - center.xyz) / radius;                        
+        float iD = diffuseIntensity(pos, norm, lP, 200.0);
+        color4 cL = color4(1.);
+        color4 cD = texture(iChannel0, (norm*.5+.5).xy);        
+        return iD * cL * cD;
+    }    
+ 	return color4(0.2);  
+}
 //------------------------------------------------------------
 // RENDERING FUNCTIONS
 
@@ -304,8 +325,10 @@ color4 calcColor(in sViewport vp, in sRay ray)
     //return crossFade(vp, a, c);
     //return crossFade(vp, a, d);
  	//return shading(vp);   
+    //return cubeMap(ray, vp);
    	return wormholeDistortion(vp);
-	return cubeMap(ray, vp);
+    //return sphere(vp, ray);
+	//return cubeMap(ray, vp);
 }
 
 

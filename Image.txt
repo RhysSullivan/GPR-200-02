@@ -180,6 +180,16 @@ sCoord waveDistortion(sCoord vp)
 	return vp;	   
 }
 
+color4 wormholeDistortion(sCoord vp)
+{
+    float scrollSpeed = -3.;
+    vec2 sphereCenter = vec2(.9,.5);
+   	vec2 warp = sphereCenter * pow(distance(sphereCenter, vp),-2.) * .02;       
+    vp += warp;      
+    return texture(iChannel3, vp + iTime) * pow(distance(sphereCenter, vp),-2.) * .2 + .2;    
+ 	
+}
+
 // referenced: https://prideout.net/barrel-distortion
 sCoord barrelDistortion(in sViewport vp)
 {    	        
@@ -215,18 +225,27 @@ color4 shading(in sViewport vp)
     return cL * cD * iD;	
 }
 
-color4 cubeMap(in sRay ray)
-{
+
+/* 
+references: https://www.shadertoy.com/view/3llfWf
+https://keisan.casio.com/exec/system/1359533867
+*/
+color4 cubeMap(in sRay ray, in sViewport vp)
+{       
+	const float pi = 3.14;
     if(iMouse.z > 0.)
-    {        
-		vec3 cubeLoc = ray.direction.xyz;		
-        vec2 normMouse = iMouse.xy/iResolution.xy;
-        float theta = 360.;
-		cubeLoc.x += normMouse.x*sin(theta)*cos(theta);
-        cubeLoc.y += normMouse.y*sin(theta)*sin(theta);
-    	return texture(iChannel1, cubeLoc);            
+    {           
+        vec3 dir = ray.direction.xyz;         
+        vec2 mouse = (iMouse.xy * vp.resolutionInv);
+        vec2 theta = (mouse * 2. * pi) - 1.; 
+    	mat2 mX = mat2(cos(theta.x), -sin(theta.x), sin(theta.x), cos(theta.x));    
+        mat2 mY = mat2(cos(theta.y), -sin(theta.y), sin(theta.y), cos(theta.y));            
+        dir.zy *= -mY;
+        dir.zx *= mX;
+    	return texture(iChannel1, dir);
     }
-               
+    
+    
 	vec3 cubeLoc = ray.direction.xyz;
 	cubeLoc.xy = waveDistortion(cubeLoc.xy);
 	float rot = sin(iTime/1000.)*360.;      
@@ -255,14 +274,15 @@ color4 calcColor(in sViewport vp, in sRay ray)
     sCoord loc = px / res;
     loc = ratio * loc;
     
+    
     color4 a = texture(iChannel0, loc);
     color4 b = texture(iChannel2, loc);
     //return crossFade(vp, a, b);
-    color4 c = texture(iChannel0, waveDistortion(vp.ndc));
+    color4 c = texture(iChannel0, waveDistortion(loc));
     //return crossFade(vp, a, c);
  	//return shading(vp);   
-    
-	return cubeMap(ray);
+   	//return wormholeDistortion(loc);
+	return cubeMap(ray, vp);
 }
 
 

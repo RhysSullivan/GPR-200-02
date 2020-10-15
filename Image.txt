@@ -7,6 +7,8 @@
 // mainImage: process the current pixel (exactly one call per pixel)
 //    fragColor: output final color for current pixel
 //    fragCoord: input location of current pixel in image (in pixels)
+
+
 void mainImage(out color4 fragColor, in sCoord fragCoord)
 {
     // setup
@@ -18,12 +20,6 @@ void mainImage(out color4 fragColor, in sCoord fragCoord)
     vec4 regCM = texture(iChannel0, uv);
     vec4 lumenCM = texture(iChannel1, uv);
     vec4 blurCM = texture(iChannel2, uv);
-    
-    fragColor = regCM;
-    fragColor = lumenCM;
-    //return;
-    fragColor = blurCM;
-    //return;
-	fragColor = regCM + blurCM;
-    fragColor = mix(regCM, blurCM, abs(sin(iTime/2.)));
-}
+    fragColor = regCM + blurCM;
+    return;
+    fragColor = 

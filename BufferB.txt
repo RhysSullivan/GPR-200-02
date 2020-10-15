@@ -5,6 +5,6 @@ void mainImage(out color4 fragColor, in sCoord fragCoord)
     vec4 a = texture(iChannel0, uv);
     float l = luma(a.rgb);
     
-    fragColor = a * l * l * l * l;
+    fragColor = a * l *  l * l * l * l;
     return;
 }

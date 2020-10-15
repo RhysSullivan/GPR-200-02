@@ -1,66 +1,16 @@
-sCoord convertToUV(vec2 fragCoord)
+vec4 guassianBlur(vec2 fragCoord)
 {
-    return fragCoord / iChannelResolution[0].xy;   
+ vec2 fLCoord = vec2(floor(fragCoord).x, fragCoord.y);
+    
+   	vec4 a = 	  texture(iChannel0, convertToUV(vec2(fLCoord.x - 2., fLCoord.y), iChannelResolution[0].xy) ); 
+    vec4 b = 3. * texture(iChannel0, convertToUV(vec2(fLCoord.x - 1., fLCoord.y), iChannelResolution[0].xy) );     
+    vec4 c = 3. * texture(iChannel0, convertToUV(vec2(fLCoord.x + 1., fLCoord.y), iChannelResolution[0].xy) ); 
+    vec4 d = 	  texture(iChannel0, convertToUV(vec2(fLCoord.x + 2., fLCoord.y), iChannelResolution[0].xy) );    
+    return (1./8.) * (a + b + c + d);
 }
 
-struct Fmat5
-{
-  	vec4[5] r1;  
-  	vec4[5] r2;
-    vec4[5] r3;
-    vec4[5] r4;
-    vec4[5] r5;
-};
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{    
-    Fmat5 mat5;
-    
-    // row 1
-    mat5.r1[0] = 1.  * texture(iChannel0, convertToUV( vec2(fragCoord.x-2.,fragCoord.y-2.) ));
-    mat5.r1[1] = 4.  * texture(iChannel0, convertToUV( vec2(fragCoord.x-1.,fragCoord.y-2.) ));
-    mat5.r1[2] = 6.  * texture(iChannel0, convertToUV( vec2(fragCoord.x,   fragCoord.y-2.) ));
-    mat5.r1[3] = 4.  * texture(iChannel0, convertToUV( vec2(fragCoord.x+1.,fragCoord.y-2.) ));
-    mat5.r1[4] = 1.  * texture(iChannel0, convertToUV( vec2(fragCoord.x+2.,fragCoord.y-2.) ));
-    
-  	// row 2
-    mat5.r2[0] = 4.  * texture(iChannel0, convertToUV( vec2(fragCoord.x-2.,fragCoord.y-1.) ));
-    mat5.r2[1] = 16. * texture(iChannel0, convertToUV( vec2(fragCoord.x-1.,fragCoord.y-1.) ));
-    mat5.r2[2] = 24. * texture(iChannel0, convertToUV( vec2(fragCoord.x,   fragCoord.y-1.) ));
-    mat5.r2[3] = 16. * texture(iChannel0, convertToUV( vec2(fragCoord.x+1.,fragCoord.y-1.) ));
-    mat5.r2[4] = 4.  * texture(iChannel0, convertToUV( vec2(fragCoord.x+2.,fragCoord.y-1.) ));
-    
-    // row 3
-    mat5.r3[0] = 6.  * texture(iChannel0, convertToUV( vec2(fragCoord.x-2.,fragCoord.y-1.) ));
-    mat5.r3[1] = 24. * texture(iChannel0, convertToUV( vec2(fragCoord.x-1.,fragCoord.y-1.) ));
-    mat5.r3[2] = 36. * texture(iChannel0, convertToUV( vec2(fragCoord.x,   fragCoord.y-1.) ));
-    mat5.r3[3] = 24. * texture(iChannel0, convertToUV( vec2(fragCoord.x+1.,fragCoord.y-1.) ));
-    mat5.r3[4] = 6.  * texture(iChannel0, convertToUV( vec2(fragCoord.x+2.,fragCoord.y-1.) ));
-    
-    // row 4
-    mat5.r4[0] = 6.  * texture(iChannel0, convertToUV( vec2(fragCoord.x-2.,fragCoord.y-1.) ));
-    mat5.r4[0] = 24. * texture(iChannel0, convertToUV( vec2(fragCoord.x-1.,fragCoord.y-1.) ));
-    mat5.r4[1] = 36. * texture(iChannel0, convertToUV( vec2(fragCoord.x,   fragCoord.y-1.) ));
-    mat5.r4[2] = 24. * texture(iChannel0, convertToUV( vec2(fragCoord.x+1.,fragCoord.y-1.) ));
-    mat5.r4[2] = 6.  * texture(iChannel0, convertToUV( vec2(fragCoord.x+2.,fragCoord.y-1.) ));
-    
-    // row 5
-    mat5.r5[0] =  1.  * texture(iChannel0, convertToUV( vec2(fragCoord.x-2.,fragCoord.y-2.) ));
-    mat5.r5[1] =  4.  * texture(iChannel0, convertToUV( vec2(fragCoord.x-1.,fragCoord.y-2.) ));
-    mat5.r5[2] =  6.  * texture(iChannel0, convertToUV( vec2(fragCoord.x,   fragCoord.y-2.) ));
-    mat5.r5[3] =  4.  * texture(iChannel0, convertToUV( vec2(fragCoord.x+1.,fragCoord.y-2.) ));
-    mat5.r5[4] =  1.  * texture(iChannel0, convertToUV( vec2(fragCoord.x+2.,fragCoord.y-2.) ));
-    
-    // 1  4  6  4  1
-    // 4  16 24 16 1
-    // 6  24 36 24 6
-    // 4  16 24 16 4
-    // 1  4  6  4  1
-    
-    vec4 sum;
-    for(int i = 0; i < 5; i++)
-    	sum += mat5.r1[i] + mat5.r2[i] + mat5.r3[i] + mat5.r4[i] + mat5.r5[i];
-    
-    sum /= 250.;
-    fragColor = sum;   
+{      	 
+    fragColor = guassianBlur(fragCoord);
 }

@@ -1,0 +1,15 @@
+vec4 guassianBlur(vec2 fragCoord)
+{
+  	vec2 fLCoord = vec2(fragCoord.x, floor(fragCoord.y) );
+    
+   	vec4 a = 	  texture(iChannel0, convertToUV(vec2(fLCoord.x, fLCoord.y - 2.), iChannelResolution[0].xy) ); 
+    vec4 b = 3. * texture(iChannel0, convertToUV(vec2(fLCoord.x, fLCoord.y - 1.), iChannelResolution[0].xy) );     
+    vec4 c = 3. * texture(iChannel0, convertToUV(vec2(fLCoord.x, fLCoord.y + 1.), iChannelResolution[0].xy) ); 
+    vec4 d = 	  texture(iChannel0, convertToUV(vec2(fLCoord.x, fLCoord.y + 2.), iChannelResolution[0].xy) ); 
+    return (1./8.) * (a + b + c + d);
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{   
+   	fragColor = guassianBlur(fragCoord); 
+}

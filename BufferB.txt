@@ -1,0 +1,10 @@
+void mainImage(out color4 fragColor, in sCoord fragCoord)
+{
+    sCoord uv = fragCoord / iChannelResolution[0].xy;
+
+    vec4 a = texture(iChannel0, uv);
+    float l = luma(a.rgb);
+    
+    fragColor = a * l * l * l * l;
+    return;
+}

@@ -7,22 +7,30 @@
 // calcColor: calculate the color of current pixel
 //	  vp:  input viewport info
 //	  ray: input ray info
+#define NMOUSE
 color4 calcColor(in sViewport vp, in sRay ray)
-{
+{    
+      
+    #ifdef MOUSE
+    float pi = 3.14;
+    vec3 dir = ray.direction.xyz; // base direction for the ray      
+    vec2 mouse = texture(iChannel1, vec2(0.,0.)).xy;
+    vec2 theta = (mouse * 2. * pi) - 1.; // theta represents the angle that we are rotating at, this maps x to be from -1 to 2pi-1
+    mat2 mX = mat2(cos(theta.x), -sin(theta.x), sin(theta.x), cos(theta.x)); // rotation matrix for x    
+    mat2 mY = mat2(cos(theta.y), -sin(theta.y), sin(theta.y), cos(theta.y)); // rotation matrix for y
+	dir.zy *= -mY; // unflip rotation and apply y rotation
+    dir.zx *= mX; // apply x rotation        
+	return texture(iChannel0, dir); // color of surface    	
+    #endif
     vec3 cubeLoc = ray.direction.xyz; // infinite direction on our ray out into 3d space	
-	float rot = 60.;// * iTime / 100.; // basic rotation matrix
+	float rot = 80.; //* iTime / 100.; // basic rotation matrix
     mat2 m = mat2(cos(rot), -sin(rot), sin(rot), cos(rot));
     cubeLoc.xz *= m;
     return texture(iChannel0, cubeLoc);    
 }
 
 
-//------------------------------------------------------------
-// SHADERTOY MAIN
-
-// mainImage: process the current pixel (exactly one call per pixel)
-//    fragColor: output final color for current pixel
-//    fragCoord: input location of current pixel in image (in pixels)
+// Code extended by Rhys Sullivan
 void mainImage(out color4 fragColor, in sCoord fragCoord)
 {
     // viewing plane (viewport) inputs

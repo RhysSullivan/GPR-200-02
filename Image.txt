@@ -7,7 +7,7 @@
 // mainImage: process the current pixel (exactly one call per pixel)
 //    fragColor: output final color for current pixel
 //    fragCoord: input location of current pixel in image (in pixels)
-
+// Code extended by Rhys Sullivan
 
 void mainImage(out color4 fragColor, in sCoord fragCoord)
 {
@@ -20,6 +20,30 @@ void mainImage(out color4 fragColor, in sCoord fragCoord)
     vec4 regCM = texture(iChannel0, uv);
     vec4 lumenCM = texture(iChannel1, uv);
     vec4 blurCM = texture(iChannel2, uv);
-    fragColor = regCM + blurCM;
+    vec4 a = regCM;
+    vec4 b = blurCM;
+    fragColor = a;    
+    fragColor = lumenCM;
     return;
-    fragColor = 
+    fragColor = b;
+    
+    fragColor = a + b; // add    
+    
+    fragColor = 1. - (1. - a) * (1. - b); // referenced: https://en.wikipedia.org/wiki/Blend_modes#Overlay
+    
+    fragColor = max(a, b); // lighten only
+    
+    
+    // soft light
+    if(b.r + b.g + b.b < .5)
+    {
+     	fragColor = 2. * a * b + a * a * (1. - 2. * b);
+    }
+    else
+    {
+        fragColor = 2. * a * (1. - b) + sqrt(a) * (2. * b - 1.);
+    }    
+    
+	fragColor = mix(a, b, .6); // mix
+	return;    
+}

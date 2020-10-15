@@ -3,7 +3,7 @@
 
 //------------------------------------------------------------
 // TYPE ALIASES & UTILITY FUNCTIONS
-
+// Code extended by Rhys Sullivan
 // sScalar: alias for a 1D scalar (non-vector)
 #define sScalar float
 
@@ -69,9 +69,9 @@ sScalar lengthSq(sVector x)
     return dot(x, x);
 }
 
-sCoord convertToUV(vec2 fragCoord, vec2 iChannelResolution)
+sCoord convertToUV(vec2 fragCoord, vec2 invRes)
 {
-    return fragCoord / iChannelResolution; // TODO optimize  
+    return fragCoord * invRes; 
 }       
 
 //------------------------------------------------------------

@@ -45,7 +45,7 @@ out vec4 vVPos;
 out vec4 vColor;
 out vec3 LightIntensity;
 
-void perVertex(vec4 pos_camera, vec3 normal, vec4 vertexPos);
+vec4 perVertex(vec4 pos_camera, vec3 normal, vec4 vertexPos);
 
 void main()
 {
@@ -75,31 +75,50 @@ void main()
 	vCPos = pos_camera;
 	vNormal = normalToUse;
 	vVPos = aPosition;
-	perVertex(vCPos, vNormal.xyz, vVPos);
+	vColor = perVertex(vCPos, vNormal.xyz, vVPos);
 					
 	// PER-FRAGMENT
 	vTexcoord = uv_atlas;	
 //	vColor = aTexcoord;
+
 }
 
-void perVertex(vec4 pos_camera, vec3 normal, vec4 vertexPos)
+float phongReflectance(vec3 pos, vec3 norm, FPointLight pLight, vec3 rayOrigin)
 {
-#define NUM_LIGHTS 1
+
+   // Phong Reflectance
+   vec3 L = normalize(vec3(pLight.center) - pos); // Light Vector        
+   	if(dot(L, aPosition.xyz) < 0.)
+	{
+	return 0.;
+	}
+   vec3 V = normalize(rayOrigin - pos); // View Vector
+   vec3 R = reflect(-L, norm);
+   float kS = dot(V,R);   
+   kS = max(kS, 0.);
+    
+   float iS = pow(kS, 16.);
+   return iS;
+}
+
+vec4 perVertex(vec4 pos_camera, vec3 normal, vec4 vertexPos)
+{
+#define NUM_LIGHTS 3
         FPointLight[NUM_LIGHTS] pLights;
         vec4 pLightPos = vec4(3.,2.,0.,1.);
         initPointLight(pLights[0],
 								pLightPos, 
                        vec3(.8,.6,0.),
-                       1.);                       
-		/*
+                       .3);                       
+		
         initPointLight(pLights[1],
-                       vec4(0.-2.,20.,1.), 
+                       vec4(-2.,200.,1.,0.), 
                        vec3(.0,.0,.8), 
-                       10.);
+                       .6);
         initPointLight(pLights[2],
-                       vec4(sin(iTime*3.)*10.,-10.,0.,1.),
+                       vec4(10.,-10.,0.,1.),
                        vec3(.8,.0,.8),
-                       20.);        */
+                       .3);        
         vec3 sumCol;
         for(int i = NUM_LIGHTS-1; i >= 0; --i)
         {    		
@@ -107,24 +126,11 @@ void perVertex(vec4 pos_camera, vec3 normal, vec4 vertexPos)
     		float Ld = pLights[i].intensity; // intensity
     		float Kd =  .8; // light lost to reflection
     		float iD = Ld * Kd * max(dot(s, normal), 0.0);
-    		
-    		
-    		float d = length(vec3(pLights[i].center) - pos_camera.xyz); // distance between light center and surface point
-			float inv = 1./d; // precompute the inverse for speed 
-	 	    vec3 L = (vec3(pLights[i].center) - pos_camera.xyz) * inv; // Light Vector                       
-            
-            // IS Start
-   			vec3 V = s; // View Vector   			
-            vec3 R = reflect(-L, normal); // Reflect is: - 2.0 * dot(N, I) * N.
-   			float kS = dot(s,R); // Specular Coefficient
-   			kS = max(0., kS); //    
-   			float iS = kS; // final specular intensity
-            iS *= iS; // 2
-            iS *= iS; // 4
-            iS *= iS; // 8
-            iS *= iS; // 16	
+    		    		    		          
+            float iS =  phongReflectance(pos_camera.xyz, normal, pLights[i], aPosition.xyz);
             // IS End 
-            sumCol += iS;//iD + iS;
+
+            sumCol += (iD) + (iS * pLights[i].color);
         }
-   	vColor = vec4(sumCol, 0.) + .1;
+   	return vec4(sumCol, 0.);
 }

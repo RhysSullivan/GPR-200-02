@@ -19,8 +19,6 @@ void initPointLight(out FPointLight pLight, vec4 center, vec3 color, float inten
     pLight.intensity = intensity;    
 }
 
-
-
 layout (location = 0) out vec4 rtFragColor;
 //out vec4 rtFragColor;
 
@@ -34,7 +32,7 @@ in vec4 vCPos;
 in vec4 vVPos;
 in vec4 vTexcoord;
 
-vec4 perFrag(vec4 pos_camera, vec3 norm_camera);
+vec4 perFrag(vec4 pos_camera, vec3 norm_camera, vec4 vertexPos);
 
 void main()
 {
@@ -45,17 +43,17 @@ void main()
 	//PER-FRAGMENT: calulate final color here using inputs
 	#define fra
 	#ifdef frag
-	rtFragColor = perFrag(vVPos, vNormal.xyz);
+	rtFragColor = perFrag(vCPos, vNormal.xyz, vVPos);
 	#else
 	#endif
 
 }
 
-vec4 perFrag(vec4 pos_camera, vec3 norm_camera)
+vec4 perFrag(vec4 pos_camera, vec3 normal, vec4 vertexPos)
 {
 #define NUM_LIGHTS 1
         FPointLight[NUM_LIGHTS] pLights;
-        vec4 pLightPos = vec4(3.,10.,8.,1.);
+        vec4 pLightPos = vec4(3.,2.,0.,1.);
         initPointLight(pLights[0],
 								pLightPos, 
                        vec3(.8,.6,0.),
@@ -70,25 +68,23 @@ vec4 perFrag(vec4 pos_camera, vec3 norm_camera)
                        vec3(.8,.0,.8),
                        20.);        */
         vec3 sumCol;
-        vec4 pos = pos_camera;   
-        vec3 norm = norm_camera;
         for(int i = NUM_LIGHTS-1; i >= 0; --i)
         {    		
-    		vec3 s = normalize( vec3(pLights[i].center.xyz  - pos.xyz ));
+    		vec3 s = normalize( vec3(pLights[i].center.xyz  - pos_camera.xyz ));
     		float Ld = pLights[i].intensity; // intensity
     		float Kd =  .8; // light lost to reflection
-    		float iD = Ld * Kd * max(dot(s, norm_camera), 0.0);
-
+    		float iD = Ld * Kd * max(dot(s, normal), 0.0);
     		
-    		float d = length(vec3(pLights[i].center) - pos.xyz); // distance between light center and surface point
+    		
+    		float d = length(vec3(pLights[i].center) - pos_camera.xyz); // distance between light center and surface point
 			float inv = 1./d; // precompute the inverse for speed 
-	 	    vec3 L = (vec3(pLights[i].center) - pos.xyz) * inv; // Light Vector                       
+	 	    vec3 L = (vec3(pLights[i].center) - pos_camera.xyz) * inv; // Light Vector                       
             
             // IS Start
             #define BF
             #ifdef BF            
-   			vec3 V = normalize(vCPos.xyz - vVPos.xyz); // View Vector   			
-            vec3 R = reflect(-L, norm); // Reflect is: - 2.0 * dot(N, I) * N.
+   			vec3 V = normalize(vertexPos.xyz - pos_camera.xyz); // View Vector   			
+            vec3 R = reflect(-L, normal); // Reflect is: - 2.0 * dot(N, I) * N.
    			float kS = dot(V,R); // Specular Coefficient
    			kS = max(kS, 0.); //    
    			float iS = kS; // final specular intensity
@@ -100,5 +96,5 @@ vec4 perFrag(vec4 pos_camera, vec3 norm_camera)
             // IS End 
             sumCol += iD + iS;
         }
-   return vec4(sumCol, 0.) + .1;
+   return vec4(sumCol, 0.) + .2;
 }

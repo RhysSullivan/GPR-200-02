@@ -1,5 +1,5 @@
 #version 300 es
-
+// code by rhys sullivan, starter from Dan Buckstein
 
 #ifdef GL_ES
 precision highp float;
@@ -22,11 +22,10 @@ void initPointLight(out FPointLight pLight, vec4 center, vec3 color, float inten
 layout (location = 0) out vec4 rtFragColor;
 //out vec4 rtFragColor;
 
-// VARYING
-// PER-VERTEX: recieve final color
 in vec4 vColor;
 uniform sampler2D vTexture;
-//PER-FRAGMENT: recieving stuff used for final color
+
+// VARYING
 in vec4 vNormal;
 in vec4 vCPos;
 in vec4 vVPos;
@@ -39,7 +38,6 @@ void main()
 	//PER-VERTEX: input is just final color
 	rtFragColor = vColor;
 
-	
 	//PER-FRAGMENT: calulate final color here using inputs
 	#define frag
 	#ifdef frag

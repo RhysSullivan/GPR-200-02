@@ -43,6 +43,7 @@ layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec4 aTexcoord;
 
 // TRANFORMATION UNIFORMS
+uniform sampler2D uTexture;
 uniform mat4 uModelMat;
 uniform mat4 uProjMat;
 uniform mat4 uViewMat;
@@ -51,6 +52,8 @@ uniform mat4 uViewProjMat;
 // VARYING
 out vec4 vColor;
 out vec3 LightIntensity;
+void perVertex(vec4 pos_camera, vec3 norm_camera);
+
 void main()
 {
 	//POSITION PIPELINE
@@ -72,10 +75,20 @@ void main()
 	
 		
 	// PER-VERTEX: calculate and output final color
-	#define NUM_LIGHTS 1
+	perVertex(pos_camera, norm_camera);
+					
+	// PER-FRAGMENT
+	vNormal = vec4(norm_camera, 0.0);
+	
+	vTexcoord = uv_atlas;
+}
+
+void perVertex(vec4 pos_camera, vec3 norm_camera)
+{
+#define NUM_LIGHTS 1
         FPointLight[NUM_LIGHTS] pLights;
         vec4 pLightPos = vec4(3.,10.,8.,1.);
-        pLightPos.xyz = pLightPos.xyz;
+        pLightPos.xyz = pLightPos.xyz * mat3(uModelMat);
         initPointLight(pLights[0],
 								pLightPos, 
                        vec3(.8,.6,0.),
@@ -93,27 +106,17 @@ void main()
         vec4 pos = pos_camera;   
         vec3 norm = norm_camera;
         for(int i = NUM_LIGHTS-1; i >= 0; --i)
-        {
-    		vec4 tnorm = normalize(uViewMat * vec4(aNormal, 0.));    
-    		vec4 eyeCoords = modelViewMat * aPosition;
-    		vec3 s = normalize( vec3(pLights[i].center.xyz  - eyeCoords.xyz ));
+        {    		
+    		vec3 s = normalize( vec3(pLights[i].center.xyz  - pos.xyz ));
     		float Ld = pLights[i].intensity; // intensity
     		float Kd =  .8; // light lost to reflection
-    		LightIntensity = vec3(Ld * Kd * max(dot(s, tnorm.xyz), 0.0));
+    		float iD = Ld * Kd * max(dot(s, norm_camera), 0.0);
     		sumCol += LightIntensity;
     		
-	        continue;
-            // ID Start
-            float d = length(vec3(pLights[i].center) - pos.xyz); // distance between light center and surface point
-            float inv = 1./d; // precompute the inverse for speed            
-	 	    vec3 L = (vec3(pLights[i].center) - pos.xyz) * inv; // Light Vector
-            float kD = dot(norm, L); //diffuse coefficient
-            kD = max(kD, 0.);
- 			float iL = pLights[i].intensity; // original light intensity
-            float iLinv = 1./iL; // precompute inverse of light intensity
-            float intensity = 1./(1. + d * iLinv + (d * iLinv * d * iLinv)); 
- 			float iD = intensity * kD; // diffuse intensity                           
-            // ID END                         
+    		
+    		float d = length(vec3(pLights[i].center) - pos.xyz); // distance between light center and surface point
+			float inv = 1./d; // precompute the inverse for speed 
+	 	    vec3 L = (vec3(pLights[i].center) - pos.xyz) * inv; // Light Vector                       
             
             // IS Start
             #define BF
@@ -134,13 +137,5 @@ void main()
             // IS End 
             sumCol += iD;			 
         }
-        vColor = vec4(sumCol, 0.) + .1;
-							
-	// vColor = vec4(aNormal * 0.5 + 0.5,1.0);
-	
-	// PER-FRAGMENT
-	vNormal = vec4(norm_camera, 0.0);
-	
-	vTexcoord = uv_atlas;
-	//gl_Position = uProjMat * modelViewMat * aTexcoord;
+   	vColor = vec4(sumCol, 0.) + .1;
 }

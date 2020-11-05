@@ -1,14 +1,6 @@
 #version 300 es
 //#version 450
 
-// MAIN DUTY: PROCESS ATTRIBUTES
-// e.g. 3D position in space
-// e.g. normal
-// e.g. 2D uv: texture coordinate
-
-//PER-FRAGMENT VARYING
-out vec4 vNormal;
-out vec4 vTexcoord;
 struct FPointLight
 {
  	vec4 center;
@@ -36,10 +28,6 @@ float lambertianReflectance(vec3 norm, vec3 pos, vec3 L, FPointLight pLight)
 layout (location = 0) in vec4 aPosition;
 layout (location = 1) in vec3 aNormal;
 
-
-//  2D uv : texture coordinate
-// TEXTURE SPACE
-//layout (location = 2) in vec2 aTexcoord;
 layout (location = 2) in vec4 aTexcoord;
 
 // TRANFORMATION UNIFORMS
@@ -49,9 +37,15 @@ uniform mat4 uProjMat;
 uniform mat4 uViewMat;
 uniform mat4 uViewProjMat;
 
+//PER-FRAGMENT VARYING
+out vec4 vNormal;
+out vec4 vTexcoord;
+out vec4 vCPos;
+out vec4 vVPos;
 // VARYING
 out vec4 vColor;
 out vec3 LightIntensity;
+
 void perVertex(vec4 pos_camera, vec3 norm_camera);
 
 void main()
@@ -65,30 +59,34 @@ void main()
     //NORMAL PIPELINE
     mat3 normalMat = transpose(inverse(mat3(modelViewMat))) ;
 	vec3 norm_camera = normalMat * aNormal;
-	
+
 	// TEXCOORD PIPELINE
 	mat4 atlasMat = mat4(0.5,0.0,0.0,0.0,
 						 0.0,0.5,0.0,0.0,
 						 0.0,0.0,1.0,0.0,
 						 0.25,0.25,0.0,1.0);
 	vec4 uv_atlas = atlasMat * aTexcoord;
-	
-		
+	#define ViewSpace
+	#ifdef ViewSpace
+	vec4 normalToUse = vec4(norm_camera, 0.);
+	#else
+	vec4 normalToUse = vec4(aNormal, 0.);
+	#endif
 	// PER-VERTEX: calculate and output final color
-	perVertex(pos_camera, norm_camera);
+	perVertex(pos_camera, normalToUse.xyz);
 					
 	// PER-FRAGMENT
-	vNormal = vec4(norm_camera, 0.0);
-	
-	vTexcoord = uv_atlas;
+	vNormal = normalToUse;
+	vVPos = aPosition;
+	vCPos = pos_camera;
+	vTexcoord = uv_atlas;	
 }
 
 void perVertex(vec4 pos_camera, vec3 norm_camera)
 {
 #define NUM_LIGHTS 1
         FPointLight[NUM_LIGHTS] pLights;
-        vec4 pLightPos = vec4(3.,10.,8.,1.);
-        pLightPos.xyz = pLightPos.xyz * mat3(uModelMat);
+        vec4 pLightPos = vec4(3.,2.,0.,1.);
         initPointLight(pLights[0],
 								pLightPos, 
                        vec3(.8,.6,0.),
@@ -131,11 +129,8 @@ void perVertex(vec4 pos_camera, vec3 norm_camera)
             iS *= iS; // 8
             iS *= iS; // 16	
             #endif
-            #ifdef BFP
-            float iS = blinnPhongReflectance(pos, norm, pLights[i], vec3(rayOrigin));
-            #endif
             // IS End 
-            sumCol += iD;			 
+            sumCol += iD + iS;
         }
    	vColor = vec4(sumCol, 0.) + .1;
 }

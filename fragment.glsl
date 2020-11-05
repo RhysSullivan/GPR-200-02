@@ -35,7 +35,7 @@ uniform mat4 uModelMat;
 uniform mat4 uProjMat;
 uniform mat4 uViewMat;
 uniform mat4 uViewProjMat;
-
+uniform float vTime;
 //PER-FRAGMENT VARYING
 out vec4 vNormal;
 out vec4 vTexcoord;
@@ -48,10 +48,13 @@ out vec3 LightIntensity;
 vec4 perVertex(vec4 pos_camera, vec3 normal, vec4 vertexPos);
 
 void main()
-{
+{	
+	
+	vec4 transform = vec4(sin(vTime),cos(vTime),0.,0.);
+	vVPos = aPosition + transform;
 	//POSITION PIPELINE
 	mat4 modelViewMat = uViewMat * uModelMat;
-	vec4 pos_camera = modelViewMat * aPosition;
+	vec4 pos_camera = modelViewMat * vVPos;
 	vec4 pos_clip = uProjMat * pos_camera;
 	gl_Position = pos_clip;
 
@@ -74,7 +77,6 @@ void main()
 	// PER-VERTEX: calculate and output final color
 	vCPos = pos_camera;
 	vNormal = normalToUse;
-	vVPos = aPosition;
 	vColor = perVertex(vCPos, vNormal.xyz, vVPos);
 					
 	// PER-FRAGMENT
@@ -88,10 +90,6 @@ float phongReflectance(vec3 pos, vec3 norm, FPointLight pLight, vec3 rayOrigin)
 
    // Phong Reflectance
    vec3 L = normalize(vec3(pLight.center) - pos); // Light Vector        
-   	if(dot(L, aPosition.xyz) < 0.)
-	{
-	return 0.;
-	}
    vec3 V = normalize(rayOrigin - pos); // View Vector
    vec3 R = reflect(-L, norm);
    float kS = dot(V,R);   

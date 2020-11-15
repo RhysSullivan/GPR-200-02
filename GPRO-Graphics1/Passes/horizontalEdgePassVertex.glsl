@@ -1,15 +1,13 @@
 #version 300 es
-//#version 450
+// Code by Rhys Sullivan and Demetrius Nekos
 
 layout (location = 0) in vec4 aPosition;
-layout (location = 1) in vec3 aNormal;
-
 
 // VARYING
-out vec4 vColor;
+out vec4 vPos;
 
 void main()
 {
 	gl_Position = aPosition;
-	vColor = aPosition;
+	vPos = aPosition; // vColor is being used to represent the UV Coords
 }

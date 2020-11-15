@@ -1,4 +1,5 @@
 #version 300 es
+// Code by Rhys Sullivan and Demetrius Nekos
 
 
 #ifdef GL_ES
@@ -9,21 +10,20 @@ layout (location = 0) out vec4 rtFragColor;
 uniform sampler2D uTexture;
 uniform vec2 uViewportSize;
 // VARYING
-in vec4 vColor;
+in vec4 vPos;
 
 vec4 getPixel(float Off)
 {
-	vec2 texCoord = (vColor * .5 + .5).xy;
+	vec2 texCoord = (vPos * .5 + .5).xy;
 	texCoord.x += Off;
-	
     return texture(uTexture, texCoord);
 }
 
 void main()
 {
-	vec4 fragCoord =  vColor * .5 + .5;
+	vec4 fragCoord =  vPos * .5 + .5;
 	
-	   //Edge detect
+	//Edge detect
     vec2 invRes = 1. / uViewportSize;
 	// kernal taken from https://docs.gimp.org/2.8/en/plug-in-convmatrix.html
 	// only 1 of the middle cells (in C and D) are negative so that the end result is as well
@@ -44,6 +44,5 @@ void main()
         pixelsy[4] * kernel[4];
         
 	rtFragColor = blur;
-
 }
 

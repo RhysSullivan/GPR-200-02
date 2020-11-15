@@ -1,19 +1,15 @@
 #version 300 es
-
+// Code by Rhys Sullivan and Demetrius Nekos
 
 #ifdef GL_ES
 precision highp float;
 #endif //GL_ES
 
 layout (location = 0) out vec4 rtFragColor;
-uniform sampler2D uTexture;
 
-// VARYING
-in vec4 vColor;
 
 //PER-FRAGMENT: recieving stuff used for final color
 in vec4 vNormal;
-in vec4 vTexcoord;
 in vec4 vLightPos1;
 in vec4 vLightPos2;
 in vec3 VRayPos;
@@ -56,5 +52,4 @@ void main()
 	//PER-FRAGMENT: calulate final color here using inputs
 	rtFragColor = calcLighting(vLightPos1,vec4(1.0),10.0,vPosition,vNormal.xyz,VRayPos)
 	+calcLighting(vLightPos2,vec4(1.0),5.0,vPosition,vNormal.xyz,VRayPos);	
-	//rtFragColor = vColor;
 }

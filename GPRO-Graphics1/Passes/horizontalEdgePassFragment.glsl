@@ -11,10 +11,10 @@ uniform vec2 uViewportSize;
 // VARYING
 in vec4 vColor;
 
-vec4 getPixel(float xOff, float yOff)
+vec4 getPixel(float Off)
 {
 	vec2 texCoord = (vColor * .5 + .5).xy;
-	texCoord += vec2(xOff, yOff);
+	texCoord.x += Off;
 	
     return texture(uTexture, texCoord);
 }
@@ -27,15 +27,21 @@ void main()
     vec2 invRes = 1. / uViewportSize;
 	// kernal taken from https://docs.gimp.org/2.8/en/plug-in-convmatrix.html
 	// only 1 of the middle cells (in C and D) are negative so that the end result is as well
-    vec3 kernel = vec3(1.0,-2.0,1.0);
+    float[5] kernel = float[5](1., 1.,-4.,1., 1.);
 	
-	vec4[3] pixelsy = vec4[3]( getPixel(1. * invRes.x,0.),
-                getPixel(0.,0.0),
-                getPixel(1. * invRes.x, 0.)
+	vec4[5] pixelsy = vec4[5]( 
+				getPixel(-2. * invRes.y),
+				getPixel(-1. * invRes.y),
+                getPixel(0.0),
+                getPixel(1. * invRes.y),
+                getPixel(2. * invRes.y)
                 );
-    vec4 blur = pixelsy[0] * kernel[0]+
+    vec4 blur = 
+    	pixelsy[0] * kernel[0]+
         pixelsy[1] * kernel[1]+
-        pixelsy[2] * kernel[2];
+        pixelsy[2] * kernel[2]+
+        pixelsy[3] * kernel[3]+
+        pixelsy[4] * kernel[4];
         
 	rtFragColor = blur;
 

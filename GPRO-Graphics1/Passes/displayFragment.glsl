@@ -7,12 +7,14 @@ precision highp float;
 
 layout (location = 0) out vec4 rtFragColor;
 uniform sampler2D uTexture;
-
+uniform sampler2D uPaperTexture;
 // VARYING
 in vec4 vColor;
 
 void main()
 {
 	vec4 uv =  vColor * .5 + .5;
-	rtFragColor = texture(uTexture, uv.xy);
+	vec4 outline = 1. - texture(uTexture, uv.xy);
+	vec4 paper = texture(uPaperTexture, uv.xy);
+	rtFragColor = outline * paper;
 }

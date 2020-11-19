@@ -19,21 +19,7 @@ out vec4 vPosition;
 
 
 void main()
-{
-	// we need to get things into perspective of the camera
-
-	// pos_v = V * pos_w
-	//position in world-space
-	//vec4 pos_world = uModelMat * aPosition;
-	
-	//position in cam space
-	// pos_v = V*M*aPos // V=view matrix = camera's ModelMat^-1
-	//vec4 pos_comera = uViewMat * pos_world;
-	
-	//position in clip space
-	//pos_clip = P*V*M*aPos = uViewProjMat * pos_world
-	//vec4 pos_clip = uViewProjMat * pos_world;	
-	
+{	
 	//POSITION PIPELINE
 	mat4 modelViewMat = uProjMat * uViewMat * uModelMat;
 	gl_Position = modelViewMat * aPosition;	
@@ -41,14 +27,7 @@ void main()
     //NORMAL PIPELINE
     mat3 normalMat = transpose(inverse(mat3(modelViewMat))) ;
 	vec3 norm_camera = normalMat * aNormal;
-
-	// TEXCOORD PIPELINE
-	mat4 atlasMat = mat4(0.5,0.0,0.0,0.25,
-						 0.0,0.5,0.0,0.25,
-						 0.0,0.0,1.0,0.0,
-						 0.0,0.0,0.0,1.0);
-						 
-	
+						
 	// Set Varyings for fragment shader lighting
 	vNormal = normalize(vec4(norm_camera, 0.0));
 	VRayPos = (modelViewMat*vec4(0.0)).xyz;
